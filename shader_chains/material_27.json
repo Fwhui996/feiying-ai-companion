@@ -1,0 +1,59 @@
+{
+  "material": "材質27",
+  "nodes": [
+    {
+      "name": "材质输出",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        400.0,
+        1500.0
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "mmd_base_tex",
+      "type": "TEX_IMAGE",
+      "location": [
+        -949.0162353515625,
+        1308.843017578125
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0026_2.png"
+    },
+    {
+      "name": "Emission Viewer",
+      "type": "EMISSION",
+      "location": [
+        400.0,
+        1540.0
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Strength": 1.0,
+      "Weight": 0.0
+    }
+  ],
+  "links": [
+    {
+      "from": "Emission Viewer.Emission",
+      "to": "材质输出.Surface"
+    },
+    {
+      "from": "mmd_base_tex.Color",
+      "to": "Emission Viewer.Color"
+    }
+  ]
+}

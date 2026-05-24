@@ -1,0 +1,3975 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎭 NLP MMD Controller - 自然语言控制3D角色</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --panel-bg: #161b22;
+  --border: #30363d;
+  --text: #c9d1d9;
+  --text-dim: #8b949e;
+  --accent: #58a6ff;
+  --accent2: #ffaa00;
+  --success: #3fb950;
+  --danger: #f85149;
+  --purple: #bc8cff;
+  --pink: #ff7b9c;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+}
+
+/* ========== 3D Viewer ========== */
+#viewer {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+#loading-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 20; transition: opacity 0.4s;
+}
+#loading-overlay.hidden { opacity: 0; pointer-events: none; }
+#loading-box {
+  background: var(--panel-bg);
+  padding: 28px 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  text-align: center;
+}
+#loading-box h3 { color: var(--accent); margin-bottom: 12px; font-size: 1.1em; }
+#loading-text { color: var(--text-dim); font-size: 0.9em; }
+.progress-bar { width: 200px; height: 4px; background: #21262d; border-radius: 2px; overflow: hidden; margin: 8px auto 0; }
+.progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
+
+.viewer-hint {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.65); color: var(--text-dim);
+  padding: 4px 14px; border-radius: 4px; font-size: 11px;
+  pointer-events: none; z-index: 5;
+}
+
+#status-bar-viewer {
+  position: absolute; top: 8px; left: 8px;
+  font-size: 11px; color: var(--text-dim); z-index: 5;
+  background: rgba(0,0,0,0.5); padding: 3px 8px; border-radius: 3px;
+}
+
+/* ========== Lighting Control Panel (floating) ========== */
+#light-panel { display: none; }
+/* PBR Debug Panel */
+#pbr-panel {
+  position: absolute; bottom: 36px; left: 10px; z-index: 15;
+  background: rgba(13,17,23,0.94); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 10px; font-size: 11px;
+  color: var(--text); min-width: 180px;
+}
+#pbr-panel .pbr-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+#pbr-panel .pbr-row:last-child { border-bottom: none; }
+#pbr-panel label { cursor: pointer; flex: 1; }
+#pbr-panel input[type="checkbox"] { accent-color: var(--accent2); }
+#pbr-panel .pbr-title { color: var(--accent2); font-weight: bold; font-size: 12px; margin-bottom: 4px; }  position: absolute; bottom: 10px; left: 10px; z-index: 15;
+  background: rgba(13,17,23,0.94); border: 1px solid var(--border);
+  border-radius: 8px; min-width: 200px;
+  font-size: 11px; color: var(--text);
+}
+#light-panel.collapsed .light-body { display: none; }
+#light-panel-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 10px; cursor: pointer; user-select: none;
+  border-radius: 8px;
+}
+#light-panel-header:hover { background: rgba(255,255,255,0.05); }
+#light-panel-header .arrow { font-size: 9px; color: var(--text-dim); transition: transform 0.2s; display: inline-block; }
+#light-panel.collapsed .arrow { transform: rotate(-90deg); }
+#light-panel-header .title { color: var(--accent2); font-weight: bold; font-size: 12px; }
+.light-body { padding: 2px 10px 8px; display: flex; flex-direction: column; gap: 5px; }
+.light-row { display: flex; align-items: center; gap: 5px; }
+.light-row label { width: 34px; font-size: 10px; color: var(--text-dim); cursor: pointer; user-select: none; }
+.light-row input[type="checkbox"] { accent-color: var(--accent2); cursor: pointer; width: 13px; height: 13px; margin: 0; }
+.light-row input[type="range"] { flex: 1; height: 4px; accent-color: var(--accent2); cursor: pointer; min-width: 50px; }
+.light-row .val { width: 30px; text-align: right; font-size: 10px; color: var(--text-dim); user-select: none; }
+.light-divider { border-top: 1px solid #21262d; margin: 3px 0; }
+#mat-panel-header.collapsed .arrow { transform: rotate(-90deg); }
+#mat-body.collapsed { display: none; }
+#pl-panel-header.collapsed .arrow { transform: rotate(-90deg); }
+#pl-body.collapsed { display: none; }
+#fx-panel-header.collapsed .arrow { transform: rotate(-90deg); }
+#fx-body.collapsed { display: none; }
+
+/* ========== NL Control Panel ========== */
+#nl-panel {
+  width: 400px; min-width: 340px;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  z-index: 10;
+}
+
+#nl-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+#nl-header h2 { font-size: 16px; color: var(--accent); }
+#nl-header .badge {
+  font-size: 10px; background: var(--success); color: #000;
+  padding: 2px 8px; border-radius: 10px; font-weight: bold;
+}
+
+/* Expression status bar */
+#expr-status {
+  display: flex; gap: 6px; padding: 8px 12px;
+  border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  min-height: 36px; align-items: center;
+}
+.expr-tag {
+  font-size: 11px; padding: 2px 8px; border-radius: 10px;
+  background: rgba(88,166,255,0.15); color: var(--accent);
+  border: 1px solid rgba(88,166,255,0.3);
+}
+.expr-tag.active { background: rgba(63,185,80,0.2); color: var(--success); border-color: rgba(63,185,80,0.4); }
+.expr-tag.action { background: rgba(255,170,0,0.15); color: var(--accent2); border-color: rgba(255,170,0,0.3); }
+
+/* Chat history */
+#chat-history {
+  flex: 1; overflow-y: auto; padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.chat-msg { max-width: 100%; animation: fadeIn 0.3s; }
+.chat-msg.user { text-align: right; }
+.chat-msg.user .bubble {
+  background: rgba(88,166,255,0.15); border: 1px solid rgba(88,166,255,0.3);
+  display: inline-block; padding: 6px 12px; border-radius: 14px 4px 14px 14px;
+  font-size: 13px; max-width: 85%; word-break: break-word;
+}
+.chat-msg.system .bubble {
+  background: rgba(255,170,0,0.1); border: 1px solid rgba(255,170,0,0.2);
+  display: inline-block; padding: 6px 12px; border-radius: 4px 14px 14px 14px;
+  font-size: 13px; max-width: 85%; color: var(--accent2);
+}
+.chat-msg.error .bubble {
+  background: rgba(248,81,73,0.1); border-color: rgba(248,81,73,0.3);
+  color: var(--danger);
+}
+.chat-msg .time {
+  font-size: 10px; color: var(--text-dim); margin-top: 2px;
+}
+
+/* Quick presets */
+#model-select-row {
+  padding: 6px 12px; border-top: 1px solid var(--border);
+  display: flex; gap: 6px; align-items: center;
+}
+#model-select { cursor: pointer; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 12px; }
+#preset-row {
+  padding: 8px 12px; border-top: 1px solid var(--border);
+  display: flex; gap: 5px; flex-wrap: wrap;
+}
+.preset-chip {
+  font-size: 11px; padding: 3px 8px; border-radius: 12px;
+  background: rgba(188,140,255,0.1); border: 1px solid rgba(188,140,255,0.25);
+  color: var(--purple); cursor: pointer; white-space: nowrap;
+  transition: background 0.2s;
+}
+.preset-chip:hover { background: rgba(188,140,255,0.25); }
+
+/* VMD Upload */
+#vmd-upload-row {
+  padding: 6px 12px; border-top: 1px solid var(--border);
+  display: flex; gap: 8px; align-items: center;
+}
+.vmd-upload-label {
+  font-size: 12px; padding: 4px 10px; border-radius: 6px;
+  background: rgba(255,122,156,0.15); border: 1px solid rgba(255,122,156,0.3);
+  color: var(--pink); cursor: pointer; white-space: nowrap;
+}
+.vmd-upload-label:hover { background: rgba(255,122,156,0.3); }
+.vmd-name-tag {
+  font-size: 11px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Input area */
+#input-area {
+  padding: 10px 12px; border-top: 1px solid var(--border);
+  display: flex; gap: 8px;
+}
+#nl-input {
+  flex: 1; background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 12px; font-size: 13px; outline: none;
+  font-family: inherit;
+}
+#nl-input:focus { border-color: var(--accent); }
+#nl-input::placeholder { color: var(--text-dim); }
+#btn-send {
+  background: var(--accent); color: #000; border: none;
+  padding: 8px 16px; border-radius: 8px; cursor: pointer;
+  font-size: 13px; font-weight: bold; white-space: nowrap;
+}
+#btn-send:hover { opacity: 0.9; }
+#btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Toggle raw MPL */
+#mpl-toggle {
+  padding: 4px 12px; border-top: 1px solid var(--border);
+  display: flex; gap: 8px; align-items: center; font-size: 11px;
+  color: var(--text-dim);
+}
+#mpl-toggle input { margin-right: 4px; }
+#raw-mpl-area {
+  display: none; padding: 0 12px 8px;
+}
+#raw-mpl-area.show { display: block; }
+#raw-mpl {
+  width: 100%; height: 120px;
+  background: var(--bg); color: #0f0;
+  border: 1px solid var(--border); border-radius: 4px;
+  padding: 6px; font-family: 'Consolas', monospace;
+  font-size: 11px; resize: vertical; outline: none;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Responsive */
+@media (max-width: 700px) {
+  body { flex-direction: column; }
+  #viewer { height: 55vh; }
+  #nl-panel { width: 100%; min-width: 0; height: 45vh; }
+}
+</style>
+</head>
+<body>
+
+<!-- 3D Viewer -->
+<div id="viewer">
+  <div id="loading-overlay">
+    <div id="loading-box">
+      <h3>🌀 正在启动...</h3>
+      <div id="loading-text">初始化 MPL 编译器...</div>
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+  </div>
+  <div class="viewer-hint">🖱 左键旋转 | 滚轮缩放 | 右键平移</div>
+  <div id="status-bar-viewer">⏳ 加载中...</div>
+</div>
+<!-- ★ end #viewer -->
+
+<!-- NL Control Panel -->
+<div id="nl-panel">
+  <div id="nl-header">
+    <h2>💬 自然语言控制</h2>
+    <span class="badge">NL → MPL + 表情</span>
+  </div>
+  
+  <div id="expr-status">
+    <span class="expr-tag" id="tag-expression">😐 中性</span>
+    <span class="expr-tag action" id="tag-action">🧍 站立</span>
+  </div>
+  
+  <div id="chat-history">
+    <div class="chat-msg system">
+      <div class="bubble" id="welcome-msg">👋 你好！试试输入自然语言指令来控制角色：
+<br>例如：「微笑」「挥手」「害羞地挥手」「跳个舞」
+<br><br>💡 勾选下方「接入大模型」即可开启 AI 自由对话模式！</div>
+      <div class="time" style="text-align:left;">系统</div>
+    </div>
+  </div>
+  
+  <div id="model-select-row">
+    <select id="model-select" onchange="onModelSelect()" style="flex:1; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:4px 8px; font-size:12px;">
+      <option value="../assets/mmd_model/绯英/绯英.pmx">🎭 绯英</option>
+    </select>
+    <button onclick="browseModelFile()" style="background:rgba(88,166,255,0.12); color:var(--accent); border:1px solid rgba(88,166,255,0.3); border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; white-space:nowrap;">📦 导入模型</button>
+  </div>
+
+  <div id="preset-row">
+    <span class="preset-chip" onclick="sendNL('开心地笑')">😊 开心地笑</span>
+    <span class="preset-chip" onclick="sendNL('难过')">😢 难过</span>
+    <span class="preset-chip" onclick="sendNL('害羞')">😳 害羞</span>
+    <span class="preset-chip" onclick="sendNL('惊讶')">😲 惊讶</span>
+    <span class="preset-chip" onclick="sendNL('生气')">😠 生气</span>
+    <span class="preset-chip" onclick="resetToNeutral()">😐 中性</span>
+    <span class="preset-chip" onclick="reloadModel()" style="background:rgba(248,81,73,0.15);border-color:rgba(248,81,73,0.4);color:var(--danger);">🔄 重新加载模型</span>
+  </div>
+
+  <!-- VMD Upload -->
+  <div id="vmd-upload-row">
+    <label class="vmd-upload-label" for="vmd-file-input">📂 加载 VMD 文件</label>
+    <input type="file" id="vmd-file-input" accept=".vmd" onchange="loadVmdFile(this)" style="display:none">
+    <span id="vmd-name" class="vmd-name-tag">未加载</span>
+  </div>
+
+  <!-- Physics Toggle -->
+  <div style="padding:6px 12px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:center;">
+    <button id="physics-toggle" onclick="togglePhysics()" style="
+      font-size:12px; padding:4px 10px; border-radius:6px;
+      background:#3fb950; color:#fff; border:none; cursor:pointer;
+    ">⚡ 物理:开</button>
+    <span style="font-size:11px; color:var(--text-dim);">打开后布料头发会飘动</span>
+  </div>
+
+  <!-- IK Toggle -->
+  <div style="padding:6px 12px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:center;">
+    <button id="ik-toggle" onclick="toggleIK()" style="
+      font-size:12px; padding:4px 10px; border-radius:6px;
+      background:#238636; color:#fff; border:none; cursor:pointer;
+    ">🦿 IK:开</button>
+    <span style="font-size:11px; color:var(--text-dim);">关闭后脚掌可移动，但可能抖动</span>
+  </div>
+
+  <!-- Knee Limit Toggle -->
+  <div style="padding:4px 12px; display:flex; gap:8px; align-items:center;">
+    <button id="links-toggle" onclick="toggleIKLinks()" style="
+      font-size:11px; padding:2px 8px; border-radius:4px;
+      background:#7c3aed; color:#fff; border:none; cursor:pointer;
+    ">🔗 IK Links:开</button>
+    <span style="font-size:10px; color:var(--text-dim);">关=CCDIKSolver完全不调骨骼，脚掌全自由</span>
+  </div>
+
+  <!-- 🔆 光照调试 -->
+  <div style="padding:6px 12px; border-top:1px solid var(--border);">
+    <div style="font-size:13px; font-weight:bold; color:var(--accent2); margin-bottom:6px;">🔆 光照调试</div>
+    
+    <!-- 环境光 -->
+    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+      <span style="font-size:11px; color:var(--text-dim); width:50px;">🌙 环境光</span>
+      <input type="range" id="debug-amb" min="0" max="200" value="50" oninput="debugAmbient(this.value)" 
+             style="flex:1; accent-color:var(--accent2); height:4px;">
+      <span style="font-size:10px; color:var(--accent2); width:28px; text-align:right;" id="debug-amb-val">0.50</span>
+    </div>
+    
+    <!-- 方向光 -->
+    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+      <span style="font-size:11px; color:var(--text-dim); width:50px;">☀️ 方向光</span>
+      <input type="range" id="debug-dir" min="0" max="100" value="35" oninput="debugDirLight(this.value)" 
+             style="flex:1; accent-color:var(--accent2); height:4px;">
+      <span style="font-size:10px; color:var(--accent2); width:28px; text-align:right;" id="debug-dir-val">0.35</span>
+    </div>
+    
+    <button onclick="debugResetLighting()" style="
+      margin-top:4px; width:100%; font-size:10px; padding:4px;
+      background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);
+      border-radius:4px; color:#999; cursor:pointer;
+    ">🔄 重置</button>
+  </div>
+
+  <!-- 🎭 表情控制面板 -->
+  <div id="morph-panel" style="padding:6px 12px; border-top:1px solid var(--border); display:none;">
+    <div style="font-size:13px; font-weight:bold; color:var(--pink); margin-bottom:6px;">🎭 表情控制</div>
+    <div style="display:flex; gap:4px; margin-bottom:6px;">
+      <select id="morph-expr-select" style="flex:1; font-size:11px; padding:3px 6px; border-radius:4px; background:var(--bg); color:var(--text); border:1px solid var(--border);">
+        <option value="">-- 选择预设表情 --</option>
+      </select>
+      <button id="morph-apply-btn" onclick="applySelectedExpression()" style="font-size:11px; padding:3px 10px; border-radius:4px; background:var(--pink); color:#fff; border:none; cursor:pointer;">应用</button>
+    </div>
+    <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+      <span style="font-size:11px; color:var(--text-dim); min-width:35px;">强度</span>
+      <input type="range" id="morph-intensity" min="0" max="100" value="100" oninput="onMorphIntensityChange(this.value)" style="flex:1; height:4px; accent-color:var(--pink);">
+      <span id="morph-intensity-val" style="font-size:10px; color:var(--pink); min-width:28px; text-align:right;">1.00</span>
+    </div>
+    <div id="morph-sliders-container" style="max-height:200px; overflow-y:auto; margin-top:4px; border-top:1px solid rgba(255,255,255,0.06); padding-top:4px;">
+      <div style="font-size:10px; color:var(--text-dim); margin-bottom:2px;">单个 Morph 滑块:</div>
+    </div>
+    <button onclick="detectModelMorphs()" style="margin-top:4px; width:100%; font-size:10px; padding:3px; background:rgba(255,123,156,0.1); border:1px solid rgba(255,123,156,0.2); border-radius:4px; color:var(--pink); cursor:pointer;">🔄 重新检测模型表情</button>
+  </div>
+
+  <div id="mpl-toggle">
+    <label><input type="checkbox" id="show-mpl" onchange="toggleRawMPL()"> MPL 编辑器</label>
+  </div>
+  <div id="raw-mpl-area">
+    <textarea id="raw-mpl" placeholder="直接输入 MPL 代码, 然后点「编译 MPL」执行...&#10;&#10;@pose test {&#10;    leg_r turn right 30;&#10;    leg_l turn left 30;&#10;}&#10;main {&#10;    test;&#10;}"></textarea>
+    <button id="btn-compile-mpl" onclick="compileCustomMPL()" style="margin-top:6px;width:100%;padding:8px;background:#7c3aed;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:bold;font-size:13px;">⚡ 编译 MPL</button>
+  </div>
+
+  <!-- 描边控制 -->
+  <div id="outline-row" style="padding:6px 12px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:center;">
+    <label style="font-size:11px; color:var(--text-dim); white-space:nowrap;">✏️ 描边</label>
+    <input type="range" id="outline-thickness" min="0" max="20" value="3" step="1"
+      oninput="updateOutlineThickness(this.value)"
+      style="flex:1; height:4px; accent-color:var(--accent); cursor:pointer;">
+    <span id="outline-thickness-val" style="font-size:11px; color:var(--text-dim); min-width:36px; text-align:right;">0.003</span>
+  </div>
+
+  <!-- 本影（Self-Shadow）控制 -->
+  <div id="shadow-row" style="padding:6px 12px; display:flex; gap:8px; align-items:center;">
+    <label style="font-size:11px; color:var(--text-dim); white-space:nowrap;">🌑 本影</label>
+    <input type="range" id="shadow-intensity" min="0" max="500" value="0" step="1"
+      oninput="updateShadowIntensity(this.value)"
+      style="flex:1; height:4px; accent-color:#888; cursor:pointer;">
+    <span id="shadow-intensity-val" style="font-size:11px; color:var(--text-dim); min-width:36px; text-align:right;">0%</span>
+  </div>
+
+  <!-- LLM 大模型接入 -->
+  <div id="llm-toggle-row" style="padding:6px 12px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+    <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;color:var(--purple);">
+      <input type="checkbox" id="llm-enabled" onchange="onLLMToggle()"> 🤖 接入大模型
+    </label>
+    <select id="llm-provider" onchange="onProviderChange()" style="
+      font-size:11px; padding:2px 6px; border-radius:4px;
+      background:var(--bg); color:var(--text); border:1px solid var(--border);
+    ">
+      <option value="ollama">Ollama</option>
+      <option value="deepseek">DeepSeek</option>
+      <option value="custom">自定义(OpenAI兼容)</option>
+    </select>
+    <button onclick="showLLMSettings()" style="
+      font-size:12px; background:rgba(188,140,255,0.15); border:1px solid rgba(188,140,255,0.3);
+      color:var(--purple); border-radius:4px; cursor:pointer; padding:2px 8px;
+    ">⚙️ 设置</button>
+    <span id="llm-status" style="font-size:10px;color:var(--text-dim);"></span>
+  </div>
+  
+  <div id="input-area">
+    <input type="text" id="nl-input" placeholder="输入自然语言指令... (Enter 发送)" 
+           onkeydown="if(event.key==='Enter')sendNL()" autofocus>
+    <button id="btn-send" onclick="sendNL()">发送</button>
+  </div>
+</div>
+
+<!-- ═══════════════════ LLM 设置弹窗 ═══════════════════ -->
+<div id="llm-settings-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;" onclick="if(event.target===this)hideLLMSettings()">
+  <div style="background:var(--panel-bg); border:1px solid var(--border); border-radius:12px; padding:24px; width:420px; max-width:90vw; max-height:80vh; overflow-y:auto;">
+    <h3 style="margin:0 0 16px;color:var(--purple);font-size:16px;">⚙️ 大模型设置</h3>
+    
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">提供商</label>
+      <select id="llm-settings-provider" onchange="onSettingsProviderChange()" style="width:100%;padding:8px;border-radius:6px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:13px;">
+        <option value="ollama">Ollama (本地)</option>
+        <option value="deepseek">DeepSeek</option>
+        <option value="custom">自定义 (OpenAI 兼容)</option>
+      </select>
+    </div>
+    
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">API Base URL</label>
+      <input type="text" id="llm-settings-url" placeholder="http://localhost:11434/v1" style="width:100%;padding:8px;border-radius:6px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:13px;outline:none;">
+    </div>
+    
+    <div style="margin-bottom:12px;" id="llm-apikey-row">
+      <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">API Key</label>
+      <div style="display:flex;gap:6px;">
+        <input type="password" id="llm-settings-apikey" placeholder="sk-..." style="flex:1;padding:8px;border-radius:6px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:13px;outline:none;">
+        <button onclick="toggleApiKeyVisibility()" style="background:var(--bg);border:1px solid var(--border);color:var(--text-dim);border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;">👁</button>
+      </div>
+    </div>
+    
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">模型名称</label>
+      <input type="text" id="llm-settings-model" placeholder="qwen2.5:7b" style="width:100%;padding:8px;border-radius:6px;background:var(--bg);color:var(--text);border:1px solid var(--border);font-size:13px;outline:none;">
+    </div>
+    
+    <div id="llm-settings-test-result" style="margin-bottom:12px;font-size:12px;color:var(--text-dim);min-height:20px;"></div>
+    
+    <div style="display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="testLLMConnection()" style="padding:8px 16px;border-radius:6px;background:#1c2128;color:var(--text);border:1px solid var(--border);cursor:pointer;font-size:13px;">🔌 测试连接</button>
+      <button onclick="saveLLMSettings()" style="padding:8px 16px;border-radius:6px;background:var(--purple);color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:bold;">💾 保存</button>
+      <button onclick="hideLLMSettings()" style="padding:8px 16px;border-radius:6px;background:var(--bg);color:var(--text-dim);border:1px solid var(--border);cursor:pointer;font-size:13px;">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SCRIPTS ==================== -->
+
+<!-- Three.js + MMD Core -->
+<script src="../assets/mmd_core/ammo.js"></script>
+<script src="../assets/mmd_core/mmdparser.min.js"></script>
+<script src="../assets/mmd_core/three.min.js"></script>
+<script src="../assets/mmd_core/OutlineEffect.js"></script>
+<script src="../assets/mmd_core/CCDIKSolver.js"></script>
+<script src="../assets/mmd_core/MMDPhysics.js"></script>
+<script src="../assets/mmd_core/TGALoader.js"></script>
+<script src="../assets/mmd_core/MMDLoader.js"></script>
+<script src="../assets/mmd_core/OrbitControls.js"></script>
+<script src="../assets/mmd_core/MMDAnimationHelper.js"></script>
+
+<!-- MPL WASM Compiler -->
+<script src="js/mmd_mpl_v2.js"></script>
+
+<!-- ==================== APP LOGIC ==================== -->
+<script>
+// ============================================================
+// 全局状态
+// ============================================================
+const $ = {
+  scene: null, camera: null, renderer: null, controls: null,
+  model: null, helper: null, clock: null,
+  outlineEffect: null, compiler: null,
+  expressionController: null, materialMorphController: null,
+  isPlaying: false, _lastFrameTime: 0,
+  currentExpression: 'neutral',
+  currentAction: 'stand',
+  physics: true,
+  ik: true
+};
+
+const FRAME_INTERVAL = 1000 / 60;  // 60fps
+const IDLE_INTERVAL = 1000 / 10;   // idle 10fps
+
+// ============================================================
+// UI Helpers
+// ============================================================
+function showLoading(show, text, pct = 0) {
+  const el = document.getElementById('loading-overlay');
+  if (text) document.getElementById('loading-text').textContent = text;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  el.classList.toggle('hidden', !show);
+}
+
+function setViewerStatus(msg) {
+  document.getElementById('status-bar-viewer').textContent = msg;
+}
+
+function setExprTags(expression, action) {
+  const exprNames = {
+    neutral: '😐 中性', happy: '😊 开心', sad: '😢 悲伤', angry: '😠 生气',
+    surprised: '😲 惊讶', fear: '😨 恐惧', disgust: '🤢 厌恶',
+    shy: '😳 害羞', cute: '🥰 可爱', wink: '😉 眨眼', blink: '😑 眨眼',
+    heartEyes: '😍 爱心眼', starEyes: '🤩 星星眼', tearful: '🥺 含泪',
+    pain: '😖 痛苦', laugh: '😂 大笑', smirk: '😏 坏笑',
+    confused: '😵 困惑', tongueOut: '😛 吐舌'
+  };
+  document.getElementById('tag-expression').textContent = exprNames[expression] || '😐 ' + expression;
+  document.getElementById('tag-expression').classList.toggle('active', expression !== 'neutral');
+  document.getElementById('tag-action').textContent = action ? ('🎬 ' + action) : '🧍 站立';
+}
+
+function addChatMessage(role, text) {
+  const container = document.getElementById('chat-history');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2,'0') + ':' + 
+               now.getMinutes().toString().padStart(2,'0');
+  div.innerHTML = `<div class="bubble">${text}</div><div class="time">${time}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function toggleRawMPL() {
+  document.getElementById('raw-mpl-area').classList.toggle('show', 
+    document.getElementById('show-mpl').checked);
+}
+
+// Compile MPL code directly from the textarea
+function compileCustomMPL() {
+  const textarea = document.getElementById('raw-mpl');
+  const code = textarea.value.trim();
+  if (!code) {
+    addChatMessage('error', '❌ MPL 代码为空');
+    return;
+  }
+  
+  addChatMessage('user', '[MPL] ' + code.substring(0, 80) + (code.length > 80 ? '...' : ''));
+  
+  const btn = document.getElementById('btn-compile-mpl');
+  btn.disabled = true;
+  btn.textContent = '⏳ 编译中...';
+  
+  try {
+    compileAndPlayMPL(code);
+    setViewerStatus('🎬 播放中: 自定义 MPL');
+    setExprTags('neutral', null);
+    addChatMessage('system', '✅ MPL 编译成功并开始播放');
+  } catch (e) {
+    const errMsg = (e instanceof Error) ? e.message : String(e || '未知错误');
+    console.error('[MPL] Compile error:', errMsg, e);
+    addChatMessage('error', '❌ MPL 编译失败: ' + errMsg);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ 编译 MPL';
+  }
+}
+
+// Detect if input looks like raw MPL code
+function isMPLCode(text) {
+  const t = text.trim();
+  // Starts with @pose, @animation, or "main"
+  return /^@(pose|animation)\b/.test(t) || /^main\s*\{/.test(t);
+}
+
+// ============================================================
+// Outline 描边控制
+// ============================================================
+function updateOutlineThickness(val) {
+  var t = parseInt(val) / 1000; // 滑块值 0-20 → 0.000 - 0.020
+  document.getElementById('outline-thickness-val').textContent = t.toFixed(3);
+  
+  // 更新每个材质的描边参数（OutlineEffect.onBeforeRender 会在下一帧自动读取）
+  if ($.model) {
+    $.model.traverse(function(child) {
+      if (child.isSkinnedMesh) {
+        var mats = Array.isArray(child.material) ? child.material : [child.material];
+        mats.forEach(function(m) {
+          if (m) {
+            if (!m.userData.outlineParameters) m.userData.outlineParameters = {};
+            m.userData.outlineParameters.thickness = t;
+            m.userData.outlineParameters.visible = t > 0;
+          }
+        });
+      }
+    });
+  }
+}
+
+// ============================================================
+// 本影（Self-Shadow）控制 —— 缩放材质 emissive
+// ============================================================
+function updateShadowIntensity(val) {
+  var multiplier = parseInt(val) / 100;
+  document.getElementById('shadow-intensity-val').textContent = parseInt(val) + '%';
+  if (!$.model) return;
+  $.model.traverse(function(child) {
+    if (child.isSkinnedMesh) {
+      var mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach(function(m) {
+        if (m && m._baseEmissive) {
+          m.emissive.copy(m._baseEmissive).multiplyScalar(multiplier);
+        }
+      });
+    }
+  });
+}
+
+// ============================================================
+// 3D Scene Init
+// ============================================================
+function initScene() {
+  const viewer = document.getElementById('viewer');
+  const w = viewer.clientWidth, h = viewer.clientHeight;
+  
+  $.scene = new THREE.Scene();
+  
+  var bgLoader = new THREE.TextureLoader();
+  $.scene.background = bgLoader.load('../assets/bg.png');
+  
+  $.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 2000);
+  $.camera.position.set(0, 9, 36);
+  $.camera.lookAt(0, 9, 0);
+  
+  $.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  $.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  $.renderer.setSize(w, h);
+  viewer.appendChild($.renderer.domElement);
+  
+  $.outlineEffect = new THREE.OutlineEffect($.renderer, {
+    defaultThickness: 0.004,
+    defaultColor: new THREE.Color(0x000000),
+    defaultAlpha: 1,
+    defaultKeepAlive: true
+  });
+  
+  $.controls = new THREE.OrbitControls($.camera, $.renderer.domElement);
+  $.controls.target.set(0, 9, 0);
+  $.controls.update();
+  
+  // ── 灯光（复刻5月13日原版）──
+  $._pointLights = [];
+  $.ambient = new THREE.AmbientLight(0xffffff, 0.7);
+  $.scene.add($.ambient);
+  var dirLight = new THREE.DirectionalLight(0xffffff, 0.35);
+  dirLight.position.set(1, 1, 1).normalize();
+  $.scene.add(dirLight);
+  
+  window.addEventListener('resize', () => {
+    const w2 = viewer.clientWidth, h2 = viewer.clientHeight;
+    $.camera.aspect = w2 / h2;
+    $.camera.updateProjectionMatrix();
+    $.renderer.setSize(w2, h2);
+  });
+}
+
+// ============================================================
+// Model Loading
+// ============================================================
+
+// ============================================================
+// Model Loading
+// ============================================================
+function loadModel(modelPath) {
+  modelPath = modelPath || '../assets/mmd_model/绯英/绯英.pmx';
+  const dir = modelPath.substring(0, modelPath.lastIndexOf('/') + 1);
+  return new Promise((resolve, reject) => {
+    const loader = new THREE.MMDLoader();
+    loader.setResourcePath(dir);
+    loader.load(
+      modelPath,
+      (mesh) => {
+        try {
+          $.model = mesh;
+          // 纯Emission材质（不受灯光，纹理直接当自发光）
+          var EMISSION_MATS = {8:true, 26:true, 5:true};
+
+          mesh.traverse(child => {
+            if (child.isSkinnedMesh) {
+              var mats = Array.isArray(child.material) ? child.material : [child.material];
+              mats.forEach(function(m) {
+                if (m) {
+                  m.skinning = true;
+                  if (m.shininess !== undefined) m.shininess = 5;
+                  if (m.specular) m.specular.set(0x111111);
+                  // 强制开启描边，覆盖 PMX 文件自带设置
+                  var outlineVal = parseInt(document.getElementById('outline-thickness').value) / 1000;
+                  m.userData.outlineParameters = {
+                    thickness: outlineVal,
+                    color: [0, 0, 0],
+                    alpha: 1.0,
+                    visible: true
+                  };
+                  // 备份 emissive（即 PMX 本影色，已被 MMDLoader 压到 20%）
+                  if (m.emissive) m._baseEmissive = m.emissive.clone();
+                }
+              });
+            }
+          });
+          
+          $.scene.add(mesh);
+          
+          // CRITICAL: Capture rest pose BEFORE helper.add().
+          $.restPoseQuat = [];
+          $.restPosePos = [];
+          mesh.skeleton.bones.forEach(b => {
+            $.restPoseQuat.push(b.quaternion.clone());
+            $.restPosePos.push(b.position.clone());
+          });
+          
+          $._legBoneIndices = [];
+          const legNames = ['leg_l', 'leg_r', 'knee_l', 'knee_r', 'ankle_l', 'ankle_r'];
+          mesh.skeleton.bones.forEach((b, i) => {
+            if (legNames.includes(b.name)) $._legBoneIndices.push(i);
+          });
+          console.log('[NLP] 腿部骨骼:', $._legBoneIndices.map(i => mesh.skeleton.bones[i].name).join(', '));
+          
+          $.helper = new THREE.MMDAnimationHelper({ afterglow: 2.0, resetPhysicsOnLoop: false });
+          $.helper.add(mesh, { physics: true, unitStep: 1 / 120, maxStepNum: 5 });
+          $.helper.enabled.physics = true;
+          
+          buildSoftBoneList();
+          
+          window.model = mesh;
+          console.log('[NLP] 模型加载完成, ' + mesh.skeleton.bones.length + ' 骨骼');
+          resolve(mesh);
+        } catch (e) {
+          console.error('[NLP] 模型初始化失败:', e);
+          reject(e);
+        }
+      },
+      (progress) => {
+        const pct = Math.min(progress.loaded / progress.total * 100, 99);
+        document.getElementById('loading-text').textContent = '🌀 加载模型中... ' + Math.round(pct) + '%';
+        document.getElementById('progress-fill').style.width = pct + '%';
+      },
+      (err) => reject(err)
+    );
+  });
+}
+
+// ============================================================
+// Expression Controller (inline, slim version)
+// ============================================================
+class ExpressionController {
+  constructor(model) {
+    this.model = model;
+    this.morphMap = model.morphTargetDictionary || {};
+    this.currentExpressions = {};
+    this.manualExpressionUntil = 0;
+    
+    this.expressions = {
+      neutral:   { desc: '中性', morphs: {} },
+      happy:     { desc: '开心', morphs: { '笑い': 1.0, 'にやり': 0.4 } },
+      sad:       { desc: '悲伤', morphs: { '困る': 0.8, '涙': 0.5 } },
+      angry:     { desc: '生气', morphs: { '怒り': 0.9, 'にやり': 0.2 } },
+      surprised: { desc: '惊讶', morphs: { 'びっくり': 1.0 } },
+      fear:      { desc: '恐惧', morphs: { 'びっくり': 0.7, '涙': 0.4 } },
+      disgust:   { desc: '厌恶', morphs: { '怒り': 0.5, '困る': 0.5 } },
+      shy:       { desc: '害羞', morphs: { '困る': 0.6, '笑い': 0.3, '照れ': 1.0 } },
+      cute:      { desc: '可爱', morphs: { '笑い': 0.7, 'ウィンク': 1.0 } },
+      wink:      { desc: '眨眼', morphs: { 'ウィンク': 1.0, '笑い': 0.3 } },
+      blink:     { desc: '眨眼', morphs: { 'まばたき': 1.0 } },
+      heartEyes: { desc: '爱心眼', morphs: { 'はぁと': 1.0, '笑い': 0.6 } },
+      starEyes:  { desc: '星星眼', morphs: { '星目': 1.0, '笑い': 0.5 } },
+      tearful:   { desc: '含泪', morphs: { '涙': 0.8, '困る': 0.5 } },
+      pain:      { desc: '痛苦', morphs: { '痛み': 1.0, '困る': 0.4 } },
+      laugh:     { desc: '大笑', morphs: { '笑い': 1.0, 'ワ': 1.0 } },
+      smirk:     { desc: '坏笑', morphs: { 'にやり': 1.0, '笑い': 0.3 } },
+      confused:  { desc: '困惑', morphs: { '困る': 0.7, 'びっくり': 0.3 } },
+      tongueOut: { desc: '吐舌', morphs: { 'べー': 1.0, '笑い': 0.4 } },
+      embarrassed:{ desc: '脸红', morphs: { '照れ': 1.0, '困る': 0.4, '笑い': 0.2 } }
+    };
+    
+    console.log('[ExpressionController] 已初始化, morphs:', Object.keys(this.morphMap).length);
+  }
+  
+  setExpression(name, weight = 1.0) {
+    const expr = this.expressions[name];
+    if (!expr) { console.warn('未知表情:', name); return false; }
+    
+    // Reset all
+    this.reset();
+    
+    // Apply
+    for (const [morphName, val] of Object.entries(expr.morphs)) {
+      this._setMorphRaw(morphName, val * weight);
+    }
+    
+    this.manualExpressionUntil = Date.now() + 30000;
+    $.currentExpression = name;
+    console.log('[ExpressionController] 设置表情:', name, expr.desc);
+    return true;
+  }
+  
+  _setMorphRaw(morphName, value) {
+    const index = this.morphMap[morphName];
+    if (index === undefined) return;
+    if (this.model.morphTargetInfluences) {
+      this.model.morphTargetInfluences[index] = Math.max(0, Math.min(1, value));
+      this.currentExpressions[morphName] = value;
+    }
+    // Also try material morph
+    if (window.materialMorphController && (morphName === '照れ' || morphName === '？')) {
+      window.materialMorphController.setMorph(morphName, value);
+    }
+  }
+  
+  reset() {
+    if (!this.model || !this.model.morphTargetInfluences) return;
+    for (const key of Object.keys(this.currentExpressions)) {
+      const idx = this.morphMap[key];
+      if (idx !== undefined) this.model.morphTargetInfluences[idx] = 0;
+    }
+    this.currentExpressions = {};
+  }
+  
+  update() {
+    // Auto-blink logic
+    const now = Date.now();
+    if (now > this.manualExpressionUntil && $.currentExpression !== 'neutral') {
+      // Don't auto-reset, let user control
+    }
+  }
+}
+
+// ============================================================
+// Material Morph Controller (slim, inline)
+// ============================================================
+class MaterialMorphController {
+  constructor(model) {
+    this.model = model;
+    this.materials = model.material;
+    this.morphMap = {
+      75: { name: '？', type: 'uv_offset', materialIndex: 40, uvOffset: {x:0.833,y:0}, uvScale: {x:0.167,y:0.5} },
+      78: { name: '照れ', type: 'opacity', materialIndex: 41, opacity: 0.8, originalOpacity: 0.2 }
+    };
+    this.originals = {};
+  }
+  
+  setMorph(name, weight) {
+    let idx = -1;
+    for (const [k, v] of Object.entries(this.morphMap)) {
+      if (v.name === name) { idx = parseInt(k); break; }
+    }
+    if (idx === -1) return false;
+    
+    const morph = this.morphMap[idx];
+    const mat = this.materials[morph.materialIndex];
+    if (!mat) return false;
+    
+    if (!this.originals[idx]) {
+      this.originals[idx] = {
+        opacity: mat.opacity,
+        offset: mat.map ? mat.map.offset.clone() : null,
+        repeat: mat.map ? mat.map.repeat.clone() : null
+      };
+    }
+    
+    if (morph.type === 'opacity') {
+      const orig = this.originals[idx];
+      mat.opacity = orig.opacity + (morph.opacity - orig.opacity) * weight;
+      mat.transparent = true;
+    } else if (morph.type === 'uv_offset') {
+      if (mat.map) {
+        const orig = this.originals[idx];
+        if (weight > 0) {
+          mat.map.offset.set(morph.uvOffset.x, morph.uvOffset.y);
+          mat.map.repeat.set(morph.uvScale.x, morph.uvScale.y);
+        } else {
+          mat.map.offset.copy(orig.offset);
+          mat.map.repeat.copy(orig.repeat);
+        }
+      }
+    }
+    return true;
+  }
+}
+
+// ============================================================
+// 🎭 Morph Control Panel UI
+// ============================================================
+let _morphSliderCache = {};  // { morphName: sliderEl }
+
+function detectModelMorphs() {
+  const panel = document.getElementById('morph-panel');
+  const container = document.getElementById('morph-sliders-container');
+  if (!$.model) { panel.style.display = 'none'; return; }
+
+  panel.style.display = 'block';
+
+  // 填充预设表情下拉
+  const select = document.getElementById('morph-expr-select');
+  select.innerHTML = '<option value="">-- 选择预设表情 --</option>';
+  if ($.expressionController) {
+    for (const [key, expr] of Object.entries($.expressionController.expressions)) {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = expr.desc;
+      select.appendChild(opt);
+    }
+  }
+
+  // ===== 收集所有 material -> {name, opacity} =====
+  const allMaterials = [];
+  $.model.traverse(function(child) {
+    if (child.isSkinnedMesh) {
+      const mList = Array.isArray(child.material) ? child.material : [child.material];
+      for (let i = 0; i < mList.length; i++) {
+        const m = mList[i];
+        if (m && m.name !== undefined) {
+          allMaterials.push({ idx: i, name: m.name, mat: m, origOpacity: m.opacity, origTransparent: m.transparent, origOutlineThickness: (m.userData.outlineParameters && m.userData.outlineParameters.thickness) ? m.userData.outlineParameters.thickness : 0 });
+        }
+      }
+    }
+  });
+
+  // ===== 辅助：模糊匹配 morph 名 -> material =====
+  function matchMaterials(morphName) {
+    // 去掉后缀修饰：ON, OFF, +, 数字
+    var stripped = morphName.replace(/(ON|OFF|[+＋]\d*|\d+)$/g, '').trim();
+    if (!stripped) stripped = morphName;
+    
+    const results = [];
+    const morphChars = new Set(stripped.split(''));
+    for (const mi of allMaterials) {
+      if (!mi.name) continue;
+      const matChars = new Set(mi.name.split(''));
+      let common = 0;
+      for (const c of morphChars) if (matChars.has(c)) common++;
+      const score = common / Math.max(1, Math.min(morphChars.size, matChars.size));
+      if (score >= 0.5) {
+        results.push({ idx: mi.idx, name: mi.name, mat: mi.mat, origOpacity: mi.origOpacity, origOutlineThickness: mi.origOutlineThickness, score: score });
+      }
+    }
+    results.sort(function(a, b) { 
+      // 优先 score 高的，同分时优先选 opacity≠1 的（toggle 目标）
+      if (Math.abs(a.score - b.score) < 0.001) {
+        var aExtreme = a.origOpacity < 0.99 ? 1 : 0;
+        var bExtreme = b.origOpacity < 0.99 ? 1 : 0;
+        return bExtreme - aExtreme;
+      }
+      return b.score - a.score; 
+    });
+    return results;
+  }
+
+  // ===== 收集所有 morph =====
+  // 1. 顶点 morph
+  const vertexMorphs = {};
+  $.model.traverse(function(child) {
+    if (child.isSkinnedMesh && child.morphTargetDictionary) {
+      for (const [name, idx] of Object.entries(child.morphTargetDictionary)) {
+        if (!(name in vertexMorphs)) {
+          vertexMorphs[name] = { mesh: child, index: idx };
+        }
+      }
+    }
+  });
+
+  // 2. 材质 morph (MaterialMorphController)
+  const materialMorphs = {};
+  if ($.materialMorphController && $.materialMorphController.morphMap) {
+    for (const [k, v] of Object.entries($.materialMorphController.morphMap)) {
+      materialMorphs[v.name] = { id: parseInt(k), type: v.type, materialIndex: v.materialIndex };
+    }
+  }
+
+  // 3. 动态材质匹配：为每个 morph 找到关联 material
+  const dynamicMatMorphs = {};
+  for (const name of Object.keys(vertexMorphs)) {
+    if (materialMorphs[name]) continue;
+    const faceOnly = /^[あいうえおかきくけこなにぬねのはひふへほ]{1,3}$/.test(name);
+    if (faceOnly) continue;
+    const matches = matchMaterials(name);
+    if (matches.length > 0 && matches[0].score >= 0.45) {
+      const bestScore = matches[0].score;
+      const top = matches.filter(function(m) { return m.score >= bestScore * 0.5; }).slice(0, 5);
+      const isOn = name.includes('ON') || name.includes('+');
+      const isOff = name.includes('OFF') || name.includes('消');
+      dynamicMatMorphs[name] = {
+        mats: top.map(function(m) { return { mat: m.mat, origOpacity: m.origOpacity, origOutlineThickness: m.origOutlineThickness }; }),
+        isOn: isOn, isOff: isOff
+      };
+    }
+  }
+
+  const allNames = [].concat(Object.keys(vertexMorphs), Object.keys(materialMorphs));
+  if (allNames.length === 0) {
+    container.innerHTML = '<div style="font-size:10px; color:var(--text-dim);">未检测到 morph</div>';
+    return;
+  }
+
+  // 重建滑块
+  const nVert = Object.keys(vertexMorphs).length;
+  const nMat = Object.keys(materialMorphs).length;
+  const nDyn = Object.keys(dynamicMatMorphs).length;
+  container.innerHTML = '<div style="font-size:10px; color:var(--text-dim); margin-bottom:2px;">Morph (顶点:' + nVert + ' 固定材质:' + nMat + ' 动态材质:' + nDyn + '):</div>';
+  _morphSliderCache = {};
+
+  for (const name of allNames) {
+    const vInfo = vertexMorphs[name];
+    const mInfo = materialMorphs[name];
+    const dInfo = dynamicMatMorphs[name];
+    const isDynMat = !!dInfo;
+    const isMat = !!mInfo;
+    const isVertex = !!vInfo;
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex; align-items:center; gap:4px; margin:1px 0;';
+
+    const label = document.createElement('span');
+    label.style.cssText = 'font-size:10px; color:var(--text-dim); min-width:70px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+    label.textContent = name;
+    label.title = name + (isVertex ? ' [顶点]' : '') + (isMat ? ' [材质]' : '') + (isDynMat ? ' [D:' + dInfo.mats.map(function(m){return m.mat.name;}).join(',') + ']' : '');
+
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = 0;
+    slider.max = 100;
+    slider.value = 0;
+    slider.style.cssText = 'flex:1; height:3px; accent-color:' + (isDynMat ? '#ff9800' : (isMat ? '#00bcd4' : 'var(--pink)')) + '; cursor:pointer;';
+    slider.dataset.morphName = name;
+
+    slider.addEventListener('input', function () {
+      const val = parseInt(this.value) / 100;
+      // 顶点 morph
+      const vi = vertexMorphs[this.dataset.morphName];
+      if (vi && vi.mesh.morphTargetInfluences) {
+        vi.mesh.morphTargetInfluences[vi.index] = val;
+      }
+      // 固定材质 morph
+      const mi = materialMorphs[this.dataset.morphName];
+      if (mi && $.materialMorphController) {
+        $.materialMorphController.setMorph(mi.name, val);
+      }
+      // 动态材质 morph：直接操作 material opacity
+      const di = dynamicMatMorphs[this.dataset.morphName];
+      if (di) {
+        for (var j = 0; j < di.mats.length; j++) {
+          var entry = di.mats[j];
+          var mat = entry.mat;
+          var orig = entry.origOpacity;
+          if (di.isOn) {
+            // ON toggle: orig≈0 → 1 (show), orig≈1 → 0 (hide counterpart)
+            if (orig < 0.5) {
+              mat.opacity = orig + (1.0 - orig) * val;
+            } else {
+              mat.opacity = orig + (0.0 - orig) * val;
+            }
+          } else if (di.isOff) {
+            mat.opacity = orig + (0.0 - orig) * val;
+          } else {
+            mat.opacity = orig + (1.0 - orig) * val;
+          }
+          mat.transparent = mat.opacity < 0.99;
+          mat.depthWrite = !mat.transparent;
+          mat.needsUpdate = true;
+          // 完全隐藏时关闭 visible 防止描边残留
+          mat.visible = mat.opacity > 0.001;
+          // 方案A：描边厚度随 opacity 等比缩放
+          if (!mat.userData.outlineParameters) mat.userData.outlineParameters = {};
+          var origThick = mat._origOutlineThickness;
+          if (origThick === undefined && entry.origOutlineThickness > 0.001) {
+            origThick = entry.origOutlineThickness;
+            mat._origOutlineThickness = origThick;
+          }
+          if (origThick !== undefined) {
+            mat.userData.outlineParameters.thickness = origThick * mat.opacity;
+          }
+          mat.userData.outlineParameters.alpha = mat.opacity;
+        }
+      }
+      const valSpan = this.nextElementSibling;
+      if (valSpan) valSpan.textContent = val.toFixed(2);
+    });
+
+    const valSpan = document.createElement('span');
+    valSpan.style.cssText = 'font-size:9px; color:' + (isDynMat ? '#ff9800' : (isMat ? '#00bcd4' : 'var(--pink)')) + '; min-width:28px; text-align:right;';
+    valSpan.textContent = '0.00';
+
+    row.appendChild(label);
+    row.appendChild(slider);
+    row.appendChild(valSpan);
+    container.appendChild(row);
+    _morphSliderCache[name] = slider;
+  }
+
+  // ===== 初始化：同步所有材质描边厚度到当前 opacity =====
+  $.model.traverse(function(child) {
+    if (child.isSkinnedMesh) {
+      const mList = Array.isArray(child.material) ? child.material : [child.material];
+      for (var k = 0; k < mList.length; k++) {
+        var mt = mList[k];
+        if (mt && mt.opacity !== undefined) {
+          if (!mt.userData.outlineParameters) mt.userData.outlineParameters = {};
+          var origThick = (mt._origOutlineThickness !== undefined) ? mt._origOutlineThickness : mt.userData.outlineParameters.thickness;
+          if (mt._origOutlineThickness === undefined && origThick > 0.001) {
+            mt._origOutlineThickness = origThick;
+          }
+          mt.userData.outlineParameters.thickness = (mt._origOutlineThickness || 0) * mt.opacity;
+          mt.userData.outlineParameters.alpha = mt.opacity;
+        }
+      }
+    }
+  });
+}
+
+// ===== 表情选择器：应用按钮 + 强度滑块 =====
+function onMorphIntensityChange(val) {
+  const valEl = document.getElementById('morph-intensity-val');
+  valEl.textContent = (parseInt(val) / 100).toFixed(2);
+}
+
+function applySelectedExpression() {
+  const select = document.getElementById('morph-expr-select');
+  const key = select.value;
+  if (!key || !$.expressionController) return;
+  const intensity = parseFloat(document.getElementById('morph-intensity').value) / 100;
+
+  // 应用预设表情
+  $.expressionController.setExpression(key, intensity);
+
+  // 同步单个 morph 滑块到当前模型状态
+  syncMorphSlidersFromModel();
+}
+
+function syncMorphSlidersFromModel() {
+  if (!$.model) return;
+  for (const [name, slider] of Object.entries(_morphSliderCache)) {
+    let val = 0;
+    // 查找当前 morph 值
+    $.model.traverse(function(child) {
+      if (child.isSkinnedMesh && child.morphTargetDictionary) {
+        const idx = child.morphTargetDictionary[name];
+        if (idx !== undefined && child.morphTargetInfluences) {
+          val = child.morphTargetInfluences[idx];
+        }
+      }
+    });
+    slider.value = Math.round(val * 100);
+    const valSpan = slider.nextElementSibling;
+    if (valSpan) valSpan.textContent = val.toFixed(2);
+  }
+}
+
+// 模型加载后自动检测 morph
+const _origLoadModel = loadModel;
+// 在模型加载完成后调用 detectModelMorphs
+// (通过 monkey-patch loadModel 后面的 Promise resolve 来实现太复杂，
+//  直接在模型加载完成后从 main() 调用即可)
+
+// ============================================================
+// Soft Constraint System — 软约束 (阻尼追踪)
+// ============================================================
+// 裙子/头发/袖子/蝴蝶结等软部件，每帧检查是否偏离 rest pose 太远，
+// 超过阈值则施加弹簧力拉回，防止"拉长"/穿模。
+// 躯体四肢骨骼由 Grant 刚性约束（ratio=1.0），不受本系统影响。
+
+// 软骨骼分类 → { pattern, category, maxAngle(rad), stiffness }
+// D骨/靴等是腿的平行装饰链，由 Grant 刚性跟随，不在此列
+const SOFT_PATTERNS = [
+  { pat: '裙_',     cat: 'skirt',   maxAngle: 0.08, stiffness: 0.35 }, // 裙摆紧贴大腿
+  { pat: '右袖',    cat: 'sleeve',  maxAngle: 0.06, stiffness: 0.15 }, // 袖摆有滞后摆动
+  { pat: '腕甲',    cat: 'sleeve',  maxAngle: 0.06, stiffness: 0.25 }, // 腕甲跟手腕
+  { pat: '後腰',    cat: 'bow',     maxAngle: 0.14, stiffness: 0.14 }, // 蝴蝶结适度飘
+  { pat: '左腰結',  cat: 'bow',     maxAngle: 0.14, stiffness: 0.14 },
+  { pat: '右腰結',  cat: 'bow',     maxAngle: 0.14, stiffness: 0.14 },
+  { pat: '左腰結帶',cat: 'bow',     maxAngle: 0.14, stiffness: 0.14 },
+  { pat: '右腰結帶',cat: 'bow',     maxAngle: 0.14, stiffness: 0.14 },
+  { pat: '左花瓣',  cat: 'bow',     maxAngle: 0.14, stiffness: 0.14 },
+  { pat: '右花瓣',  cat: 'bow',     maxAngle: 0.14, stiffness: 0.14 },
+  { pat: '左側腰',  cat: 'waist',   maxAngle: 0.08, stiffness: 0.18 },
+  { pat: '右側腰',  cat: 'waist',   maxAngle: 0.08, stiffness: 0.18 },
+  { pat: '前結',    cat: 'waist',   maxAngle: 0.08, stiffness: 0.18 },
+  { pat: '髪',      cat: 'hair',    maxAngle: 0.35, stiffness: 0.06 }, // 头发自由飘
+  { pat: '外套',    cat: 'cape',    maxAngle: 0.10, stiffness: 0.14 },
+  { pat: '領結',    cat: 'collar',  maxAngle: 0.08, stiffness: 0.16 },
+  { pat: '領帶',    cat: 'collar',  maxAngle: 0.10, stiffness: 0.14 },
+  { pat: '透明掛飾',cat: 'acc',     maxAngle: 0.12, stiffness: 0.14 },
+  { pat: '肩墊',    cat: 'armor',   maxAngle: 0.06, stiffness: 0.20 },
+  { pat: '胸',      cat: 'body',    maxAngle: 0.05, stiffness: 0.22 },
+  { pat: '髪結',    cat: 'hair',    maxAngle: 0.35, stiffness: 0.06 },
+  { pat: '髪繩',    cat: 'hair',    maxAngle: 0.35, stiffness: 0.06 },
+];
+
+// 全局软约束参数（基准值，各分类可覆盖）
+const SOFT = {
+  damping: 0.95,       // 速度衰减 (1=无衰减, 0=秒停)
+  gravity: 0.002,      // 重力强度（每帧向 Y- 转角）  
+  enabled: true,
+};
+
+// 初始化：构建软骨骼索引表
+// 每次 helper 重建后调用
+function buildSoftBoneList() {
+  if (!$.model || !$.model.skeleton) return;
+  const bones = $.model.skeleton.bones;
+  $.softBoneIndices = [];
+  $.softRestQuats = [];
+  $.softMaxAngles = [];
+  $.softStiffness = [];
+  $.softVelocityQ = [];  // per-bone angular velocity quaternion
+  
+  const BRIDGE_BONES = [
+    '右袖親', '後腰結', '領結', '後外套',
+  ];
+  
+  for (let i = 0; i < bones.length; i++) {
+    const name = bones[i].name;
+    if (BRIDGE_BONES.includes(name)) continue;
+    
+    let rule = null;
+    for (const r of SOFT_PATTERNS) {
+      if (name.includes(r.pat)) { rule = r; break; }
+    }
+    
+    if (rule && $.restPoseQuat && $.restPoseQuat[i]) {
+      $.softBoneIndices.push(i);
+      // Store parent-relative rest quaternion instead of absolute
+      const parent = bones[i].parent;
+      const absoluteRest = $.restPoseQuat[i].clone();
+      if (parent) {
+        const parentRestIdx = bones.indexOf(parent);
+        const parentRest = (parentRestIdx >= 0 && $.restPoseQuat[parentRestIdx]) 
+          ? $.restPoseQuat[parentRestIdx].clone() 
+          : new THREE.Quaternion();
+        const relativeRest = absoluteRest.clone();
+        relativeRest.premultiply(new THREE.Quaternion().copy(parentRest).invert());
+        $.softRestQuats.push(relativeRest);
+      } else {
+        $.softRestQuats.push(absoluteRest);
+      }
+      $.softMaxAngles.push(rule.maxAngle);
+      $.softStiffness.push(rule.stiffness);
+      $.softVelocityQ.push(new THREE.Quaternion(0, 0, 0, 1));
+    }
+  }
+  console.log('[Soft] 旋转约束骨骼: ' + $.softBoneIndices.length + ' 块');
+}
+
+// Warmup 结束后强制软骨骼回到 rest quaternion（消除重力变形）
+// Idle-only soft constraint: snaps soft bones to rest local quaternion.
+// Completely disabled during animation playback (isPlaying) — the animation
+// owns all bone positions, and the skeleton hierarchy naturally propagates
+// parent rotations to child bones correctly.
+function applySoftConstraints(delta) {
+  if (!$.softBoneIndices || !$.softBoneIndices.length) return;
+  if (!SOFT.enabled) return;
+  
+  // During animation playback, the animation (VMD/MPL) owns all bone positions.
+  // Soft constraints MUST NOT interfere — they fight the animation and cause
+  // worse distortion than doing nothing. The skeleton hierarchy naturally
+  // propagates parent rotations to soft children correctly.
+  if ($.isPlaying) return;
+  
+  if (delta <= 0 || delta > 0.5) delta = 0.016;
+  
+  const bones = $.model.skeleton.bones;
+  const idleGravity = 0.0003 * delta * 60;
+  
+  for (let j = 0; j < $.softBoneIndices.length; j++) {
+    const i = $.softBoneIndices[j];
+    const bone = bones[i];
+    if (!bone.parent) continue;
+    
+    const restLocal = $.softRestQuats[j];
+    let targetLocalQ = restLocal.clone();
+    
+    // Tiny gravity tilt in local space (idle only)
+    if (idleGravity > 0) {
+      const gravQ = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0), -idleGravity
+      );
+      targetLocalQ.multiply(gravQ);
+    }
+    
+    // Idle: snap to rest local to prevent gravity/accumulated drift
+    bone.quaternion.copy(targetLocalQ);
+  }
+}
+
+// ============================================================
+// Animation / VMD Loading
+// ============================================================
+function resetModelToRest() {
+  if (!$.model || !$.restPoseQuat) return;
+  $.isPlaying = false;
+  if ($._animTimer) { clearTimeout($._animTimer); $._animTimer = null; }
+  $._ikPrecomputed = null;
+  // Stop and dispose old mixer
+  var oldObj = $.helper.objects.get($.model);
+  if (oldObj && oldObj.mixer) oldObj.mixer.stopAllAction();
+  // 清理场景碰撞体
+  removeStageCollision();
+  // Remove old helper entry
+  $.helper.remove($.model);
+  // Reset bones to rest pose
+  var bones = $.model.skeleton.bones;
+  for (var i = 0; i < bones.length; i++) {
+    if ($.restPoseQuat[i]) bones[i].quaternion.copy($.restPoseQuat[i]);
+    if ($.restPosePos[i]) bones[i].position.copy($.restPosePos[i]);
+  }
+}
+
+function loadAndPlayVMD(url, size) {
+  // 先重置并移除旧的 helper 条目
+  resetModelToRest();
+  $._ikPrecomputed = null;
+  
+  const loader = new THREE.MMDLoader();
+  loader.loadAnimation(url, $.model, (animation) => {
+    if (!animation || !animation.tracks || animation.tracks.length === 0) {
+      console.warn('[NLP] 动画为空');
+      if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+      return;
+    }
+    
+    $.clock = new THREE.Clock();
+    
+    // Filter identity tracks (all values = (0,0,0,1))
+    animation.tracks = animation.tracks.filter(track => {
+      const v = track.values;
+      for (let i = 0; i < v.length; i += 4) {
+        if (v[i] !== 0 || v[i+1] !== 0 || v[i+2] !== 0 || v[i+3] !== 1) return true;
+      }
+      return false;
+    });
+    
+    if (animation.tracks.length === 0) {
+      console.warn('[NLP] 所有动画轨均为恒等轨，无有效动作');
+      return;
+    }
+    
+    $.helper.add($.model, {
+      animation: animation,
+      physics: true,
+      warmup: 0,
+      unitStep: 1 / 120,
+      maxStepNum: 5
+    });
+    $.helper.enabled.physics = $.physics;  // 恢复用户设置的物理状态
+    // 重建碰撞地板（helper.add 重建了物理世界）
+    setTimeout(function() { addStageCollision(); }, 500);
+    // Auto-detect: VMD 无 IK 骨关键帧时自动关 IK
+    var ikBoneNames = [$.model.skeleton.bones[9].name, $.model.skeleton.bones[6].name];
+    if (!animation.tracks.some(function(t) {
+      return ikBoneNames.some(function(n) { return t.name.indexOf(n) !== -1; });
+    })) $.ik = false;
+    $.helper.enabled.ik = $.ik;
+    openKneeLimits();
+    buildSoftBoneList();
+    
+    // Set new actions to play once
+    var loopObj = $.helper.objects.get($.model);
+    if (loopObj && loopObj.mixer) {
+      var actions = loopObj.mixer._actions;
+      for (var i = 0; i < actions.length; i++) {
+        actions[i].setLoop(THREE.LoopOnce);
+        actions[i].clampWhenFinished = true;
+      }
+      loopObj.mixer.addEventListener('finished', function() {
+        $.isPlaying = false;
+        $.helper.enabled.physics = $.physics;
+      });
+    }
+    
+    $.isPlaying = true;
+    console.log('[VMD] 驱动骨骼 (' + animation.tracks.length + '):', animation.tracks.map(function(t) { return t.name.replace('.quaternion','').replace('.position',''); }).join(', '));
+    setViewerStatus('🎬 播放: ' + (size/1024).toFixed(1) + 'KB');
+  }, undefined, (err) => {
+    if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+    console.error('[NLP] VMD 加载失败:', err);
+    addChatMessage('error', '❌ VMD 加载失败: ' + (err?.message || String(err)));
+  });
+}
+
+// ============================================================
+// VMD File Upload (for testing)
+// ============================================================
+function loadVmdFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  
+  document.getElementById('vmd-name').textContent = file.name;
+  const url = URL.createObjectURL(file);
+  
+  addChatMessage('system', '📂 加载 VMD: ' + file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)');
+  
+  loadAndPlayVMD(url, file.size);
+  setViewerStatus('🎬 播放 VMD: ' + file.name);
+}
+
+window.loadVmdFile = loadVmdFile;
+
+// ============================================================
+// MPL Compile & Play (with IK target pre-calculation)
+// ============================================================
+function compileAndPlayMPL(mplCode) {
+  if (!$.compiler) throw new Error('MPL 编译器未初始化');
+  resetModelToRest();
+  
+  let vmdData;
+  try {
+    vmdData = $.compiler.compile(mplCode);
+  } catch (compileErr) {
+    throw new Error('MPL 编译失败: ' + (compileErr.message || String(compileErr)));
+  }
+  
+  if (!vmdData) throw new Error('编译结果为空(null)');
+  if (vmdData.length === 0) throw new Error('编译结果为空(长度0)');
+  
+  console.log('[NLP] MPL 编译成功, VMD ' + vmdData.length + ' bytes');
+  
+  // 加载动画，但拦截 AnimationClip 来预计算 IK 目标
+  const loader = new THREE.MMDLoader();
+  const blob = new Blob([vmdData], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  
+  loader.loadAnimation(url, $.model, (animation) => {
+    URL.revokeObjectURL(url);
+    
+    if (!animation || !animation.tracks || animation.tracks.length === 0) {
+      console.warn('[NLP] 动画为空');
+      return;
+    }
+    
+    // === 预计算：逐帧推演脚踝世界位置 ===
+    const ikTargetsByFrame = precomputeIKTargets(animation);
+    
+    // === 按正常流程播放，但每帧前喂 IK 目标 ===
+    $.clock = new THREE.Clock();
+    
+    // Filter identity tracks
+    animation.tracks = animation.tracks.filter(t => {
+      for (let i=0;i<t.values.length;i+=4)
+        if (t.values[i]!==0||t.values[i+1]!==0||t.values[i+2]!==0||t.values[i+3]!==1) return true;
+      return false;
+    });
+    
+    $.helper.add($.model, {
+      animation: animation,
+      physics: true,
+      warmup: 0,
+      unitStep: 1 / 120,
+      maxStepNum: 5
+    });
+    $.helper.enabled.physics = $.physics;
+    // 重建碰撞地板（helper.add 会重建物理世界）
+    setTimeout(function() { addStageCollision(); }, 500);
+    // Auto-detect: MPL 未使用 IK 骨时自动关 IK，避免 CCDIKSolver 锁脚
+    var ikBoneNames = [$.model.skeleton.bones[9].name, $.model.skeleton.bones[6].name];
+    if (!animation.tracks.some(function(t) {
+      return ikBoneNames.some(function(n) { return t.name.indexOf(n) !== -1; });
+    })) $.ik = false;
+    $.helper.enabled.ik = $.ik;
+    openKneeLimits();
+    buildSoftBoneList();
+    
+    // Store precomputed IK targets for animate() to use
+    $._ikPrecomputed = ikTargetsByFrame;
+    
+    const loopObj = $.helper.objects.get($.model);
+    if (loopObj && loopObj.mixer) {
+      const actions = loopObj.mixer._actions;
+      for (let i = 0; i < actions.length; i++) {
+        actions[i].setLoop(THREE.LoopOnce);
+        actions[i].clampWhenFinished = true;
+      }
+    }
+    
+    $.isPlaying = true;
+    addChatMessage('system', '✅ MPL 编译成功并开始播放 (' + ikTargetsByFrame.length + ' 帧)');
+    setViewerStatus('🎬 播放中: 自定义 MPL');
+    
+    // Clear computed targets when animation ends
+    if ($._animTimer) clearTimeout($._animTimer);
+    $._animTimer = setTimeout(() => {
+      $._ikPrecomputed = null;
+    }, animation.duration * 1000 + 500);
+    
+  }, undefined, (err) => {
+    if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+    console.error('[NLP] VMD 加载失败:', err);
+    addChatMessage('error', '❌ VMD 加载失败: ' + (err?.message || String(err)));
+  });
+}
+
+// 预计算每帧的 IK 目标位置（在骨骼副本上逐帧推演）
+function precomputeIKTargets(animation) {
+  if (!$.model) return [];
+  
+  const bones = $.model.skeleton.bones;
+  const restQuats = $.restPoseQuat;
+  const restPos = $.restPosePos;
+  if (!restQuats) return [];
+  
+  // 找到腿骨轨道（quaternion tracks for leg bones）
+  const legBoneNames = ['右足','右ひざ','右足首','右足先EX','左足','左ひざ','左足首','左足先EX'];
+  const legTracks = [];
+  for (const t of animation.tracks) {
+    const m = t.name.match(/\.bones\[(.+?)\]\.quaternion/);
+    if (!m) continue;
+    const idx = bones.findIndex(b => b.name === m[1]);
+    if (idx >= 0 && legBoneNames.includes(m[1])) {
+      legTracks.push({ track: t, boneIndex: idx });
+    }
+  }
+  
+  if (legTracks.length === 0) return [];
+  
+  // 帧间隔固定（MPL clips usually short）
+  const fps = 30;
+  const duration = animation.duration;
+  const totalFrames = Math.ceil(duration * fps);
+  const dt = 1 / fps;
+  
+  const result = [];
+  
+  // 工作副本：临时 quaternion 数组
+  const workQuats = new Array(bones.length);
+  for (let i = 0; i < bones.length; i++) {
+    workQuats[i] = restQuats[i] ? restQuats[i].clone() : new THREE.Quaternion();
+  }
+  
+  const tmpWorld = new THREE.Vector3();
+  const tmpLocal = new THREE.Vector3();
+  const tmpMat4 = new THREE.Matrix4();
+  const invMat4 = new THREE.Matrix4();
+  
+  // IK 骨和父骨索引
+  const ankleL = bones[86], ankleR = bones[81];
+  const ikLParent = bones[8], ikRParent = bones[5];
+  
+  for (let f = 0; f < totalFrames; f++) {
+    const t = f * dt;
+    
+    // 重置所有骨骼为 rest
+    for (let i = 0; i < bones.length; i++) {
+      workQuats[i].copy(restQuats[i] || new THREE.Quaternion());
+    }
+    
+    // 应用腿骨轨道：evaluate quaternion at time t
+    for (const lt of legTracks) {
+      const track = lt.track;
+      const val = new THREE.Quaternion();
+      // 手动线性插值（简化版 evaluate）
+      const times = track.times;
+      const values = track.values;
+      if (times.length === 0) continue;
+      
+      let idx = 0;
+      for (let k = 0; k < times.length; k++) {
+        if (times[k] > t) break;
+        idx = k;
+      }
+      
+      if (idx >= times.length - 1) {
+        // Past end, use last value
+        const off = (times.length - 1) * 4;
+        val.set(values[off], values[off+1], values[off+2], values[off+3]);
+      } else {
+        const t0 = times[idx], t1 = times[idx+1];
+        const alpha = (t - t0) / (t1 - t0);
+        const o0 = idx * 4, o1 = (idx+1) * 4;
+        const q0 = new THREE.Quaternion(values[o0], values[o0+1], values[o0+2], values[o0+3]);
+        const q1 = new THREE.Quaternion(values[o1], values[o1+1], values[o1+2], values[o1+3]);
+        val.copy(q0).slerp(q1, alpha);
+      }
+      
+      workQuats[lt.boneIndex].copy(val);
+    }
+    
+    // 推演：逐骨骼累乘四元数，需要完整的骨骼层级
+    // 简化：只推演腿链的骨骼
+    // 左腿链: 下半身(83) → 左足(84) → 左ひざ(85) → 左足首(86) → 左足先EX(87)
+    // 右腿链: 下半身(83) → 右足(79) → 右ひざ(80) → 右足首(81) → 右足先EX(82)
+    const lowerBodyIdx = 83;
+    
+    function chainWorld(chainIdx, idx) {
+      const q = new THREE.Quaternion();
+      const p = new THREE.Vector3();
+      // Start from root: accumulate parent chain rotation
+      // This is a rough approximation — full skeleton hierarchy would be needed for accuracy
+      p.set(0,0,0);
+      
+      // Accumulate quaternions up the chain (simplified: skip middle bones)
+      // Lower body
+      if (workQuats[lowerBodyIdx]) q.multiply(workQuats[lowerBodyIdx]);
+      
+      for (const ci of chainIdx) {
+        if (workQuats[ci]) q.multiply(workQuats[ci]);
+        // Add bone position in local space
+        const bp = restPos[ci] || new THREE.Vector3();
+        p.add(bp.clone().applyQuaternion(q));
+      }
+      
+      return { pos: p, quat: q };
+    }
+    
+    // Left chain
+    const lResult = chainWorld([84, 85, 86, 87], 86);
+    const rResult = chainWorld([79, 80, 81, 82], 81);
+    
+    // Convert to world position
+    tmpWorld.copy(lResult.pos);
+    if (ikLParent) {
+      ikLParent.updateMatrixWorld();
+      invMat4.copy(ikLParent.matrixWorld).invert();
+      tmpLocal.copy(tmpWorld).applyMatrix4(invMat4);
+    }
+    const ikLPos = tmpLocal.clone();
+    
+    tmpWorld.copy(rResult.pos);
+    if (ikRParent) {
+      ikRParent.updateMatrixWorld();
+      invMat4.copy(ikRParent.matrixWorld).invert();
+      tmpLocal.copy(tmpWorld).applyMatrix4(invMat4);
+    }
+    const ikRPos = tmpLocal.clone();
+    
+    result.push({
+      frame: f, time: t,
+      ikL: [ikLPos.x, ikLPos.y, ikLPos.z],
+      ikR: [ikRPos.x, ikRPos.y, ikRPos.z]
+    });
+  }
+  
+  console.log('[MPL] 预计算 IK 目标完成: ' + result.length + ' 帧');
+  return result;
+}
+
+// ============================================================
+// Physics Toggle
+// ============================================================
+function togglePhysics() {
+  if (!$.helper) return;
+  
+  $.physics = !$.physics;
+  $.helper.enabled.physics = $.physics;
+  
+  const btn = document.getElementById('physics-toggle');
+  if (btn) {
+    btn.textContent = '⚡ 物理:' + ($.physics ? '开' : '关');
+    btn.style.background = $.physics ? '#3fb950' : '#cf222e';
+  }
+  
+  setViewerStatus(($.physics ? '⚡' : '🔌') + ' 物理效果: ' + ($.physics ? '开' : '关'));
+  addChatMessage('system', ($.physics ? '⚡' : '🔌') + ' 物理效果已' + ($.physics ? '开启' : '关闭'));
+}
+window.togglePhysics = togglePhysics;
+
+// ============================================================
+// IK Toggle
+// ============================================================
+function toggleIK() {
+  if (!$.helper) return;
+  $.ik = !$.ik;
+  $.helper.enabled.ik = $.ik;
+  const btn = document.getElementById('ik-toggle');
+  if (btn) {
+    btn.textContent = '🦿 IK:' + ($.ik ? '开' : '关');
+    btn.style.background = $.ik ? '#238636' : '#cf222e';
+  }
+  addChatMessage('system', '🦿 IK 已' + ($.ik ? '开启' : '关闭'));
+}
+window.toggleIK = toggleIK;
+
+// ============================================================
+// IK Links Toggle — disable/enable all links in 4 leg IK chains
+// ============================================================
+let _ikLinksEnabled = true;
+function toggleIKLinks() {
+  if (!$.model || !$.helper) return;
+  const obj = $.helper.objects.get($.model);
+  if (!obj || !obj.ikSolver) return;
+  _ikLinksEnabled = !_ikLinksEnabled;
+  for (const ik of obj.ikSolver.iks) {
+    if ([6, 7, 9, 10].includes(ik.target)) {
+      for (const link of ik.links) link.enabled = _ikLinksEnabled;
+    }
+  }
+  const btn = document.getElementById('links-toggle');
+  if (btn) {
+    btn.textContent = '🔗 IK Links:' + (_ikLinksEnabled ? '开' : '关');
+    btn.style.background = _ikLinksEnabled ? '#238636' : '#cf222e';
+  }
+  addChatMessage('system', '🔗 IK Links 已' + (_ikLinksEnabled ? '开启' : '关闭'));
+}
+window.toggleIKLinks = toggleIKLinks;
+
+// ============================================================
+// IK Target Offset — 手动调整 IK 目标骨位置 (调试)
+// ============================================================
+// Called every frame in animate() — reads ankle world pos, writes IK target to backupBones
+function syncIKToBackupBones() {
+  if (!$.model) return;
+  const bones = $.model.skeleton.bones;
+  const ikL = bones[9], ikR = bones[6];
+  if (!ikL || !ikR) return;
+  
+  // 如果预计算了 IK 目标，优先使用
+  if ($._ikPrecomputed && $._ikPrecomputed.length > 0 && $.clock) {
+    const elapsed = $.clock.getElapsedTime();
+    const fps = 30;
+    const frameIdx = Math.floor(elapsed * fps);
+    const target = $._ikPrecomputed[Math.min(frameIdx, $._ikPrecomputed.length - 1)];
+    if (target) {
+      ikL.position.set(target.ikL[0], target.ikL[1], target.ikL[2]);
+      ikR.position.set(target.ikR[0], target.ikR[1], target.ikR[2]);
+    }
+  } else {
+    // Fallback: read ankle world pos (1-frame delay)
+    const ankleL = bones[86], ankleR = bones[81];
+    if (!ankleL || !ankleR) return;
+    
+    const worldL = new THREE.Vector3(); ankleL.getWorldPosition(worldL);
+    const worldR = new THREE.Vector3(); ankleR.getWorldPosition(worldR);
+    
+    const ikLParent = bones[8], ikRParent = bones[5];
+    if (ikLParent) {
+      ikLParent.updateMatrixWorld();
+      const inv = new THREE.Matrix4().copy(ikLParent.matrixWorld).invert();
+      worldL.applyMatrix4(inv);
+    }
+    if (ikRParent) {
+      ikRParent.updateMatrixWorld();
+      const inv = new THREE.Matrix4().copy(ikRParent.matrixWorld).invert();
+      worldR.applyMatrix4(inv);
+    }
+    
+    ikL.position.copy(worldL);
+    ikR.position.copy(worldR);
+  }
+  
+  // 写入 backupBones
+  const obj = $.helper.objects.get($.model);
+  if (obj && obj.backupBones) {
+    const bkp = obj.backupBones;
+    bkp[9*7+0] = ikL.position.x; bkp[9*7+1] = ikL.position.y; bkp[9*7+2] = ikL.position.z;
+    bkp[9*7+3] = ikL.quaternion.x; bkp[9*7+4] = ikL.quaternion.y; bkp[9*7+5] = ikL.quaternion.z; bkp[9*7+6] = ikL.quaternion.w;
+    bkp[6*7+0] = ikR.position.x; bkp[6*7+1] = ikR.position.y; bkp[6*7+2] = ikR.position.z;
+    bkp[6*7+3] = ikR.quaternion.x; bkp[6*7+4] = ikR.quaternion.y; bkp[6*7+5] = ikR.quaternion.z; bkp[6*7+6] = ikR.quaternion.w;
+  }
+}
+
+// ============================================================
+// Open knee rotation limits so IK solver can bend in all directions
+// ============================================================
+function openKneeLimits() {
+  if (!$.model || !$.helper) return;
+  const obj = $.helper.objects.get($.model);
+  if (!obj || !obj.ikSolver) return;
+  const HALF_PI = Math.PI / 2;
+  for (const ik of obj.ikSolver.iks) {
+    if (![6, 7, 9, 10].includes(ik.target)) continue;  // leg IK + toe IK
+    for (const link of ik.links) {
+      if (!link.rotationMin || !link.rotationMax) continue;
+      link.rotationMin.y = -HALF_PI;
+      link.rotationMin.z = -HALF_PI;
+      link.rotationMax.y = HALF_PI;
+      link.rotationMax.z = HALF_PI;
+    }
+  }
+}
+
+// ============================================================
+// Dazi hybrid — MPL handles arms, JS handles legs via IK targets
+// ============================================================
+function applyDaziPose() {
+  if (!$.model) return;
+  $.isPlaying = false;
+  var b = $.model.skeleton.bones;
+  
+  // 1. Reset all bones to rest pose
+  for (var i = 0; i < b.length; i++) {
+    if ($.restPoseQuat[i]) b[i].quaternion.copy($.restPoseQuat[i]);
+  }
+  $.model.skeleton.update();
+  
+  // 2. Disable IK + Grant BEFORE touching bones
+  $.helper.enabled.ik = false;
+  $.helper.enabled.grant = false;
+  
+  // 3. Arms: shoulders outward
+  var shL = b[49];  // 左肩
+  var shR = b[19];  // 右肩
+  var elL = b[56];  // 左ひじ
+  var elR = b[26];  // 右ひじ
+  var ub  = b.find(function(x){return x.name==='上半身'});
+  
+  if (shL) shL.quaternion.setFromAxisAngle(new THREE.Vector3(0,0,1), 0.8);
+  if (shR) shR.quaternion.setFromAxisAngle(new THREE.Vector3(0,0,1), -0.8);
+  if (elL) elL.quaternion.setFromAxisAngle(new THREE.Vector3(1,0,0), -0.3);
+  if (elR) elR.quaternion.setFromAxisAngle(new THREE.Vector3(1,0,0), -0.3);
+  if (ub)  ub.quaternion.setFromAxisAngle(new THREE.Vector3(1,0,0), -0.1);
+  
+  // 4. Legs: thighs outward from hip (Z-axis)
+  var lThigh = b[84], rThigh = b[79];
+  lThigh.quaternion.setFromAxisAngle(new THREE.Vector3(0,0,1), -0.5);
+  rThigh.quaternion.setFromAxisAngle(new THREE.Vector3(0,0,1), 0.5);
+  
+  $.model.skeleton.update();
+  
+  setViewerStatus('🙆 大字 Pose');
+  addChatMessage('system', '🙆 大字 Pose');
+}
+window.applyDaziPose = applyDaziPose;
+
+function resetToNeutral() {
+  if ($.expressionController) {
+    $.expressionController.setExpression('neutral');
+  }
+  $.currentExpression = 'neutral';
+  setExprTags('neutral', null);
+  setViewerStatus('😐 表情已重置为中性');
+  addChatMessage('system', '😐 表情已重置为中性');
+}
+window.resetToNeutral = resetToNeutral;
+
+async function reloadModel(modelPath) {
+  if (!$.model) return;
+  const oldModel = $.model;
+  
+  // 1. Stop everything
+  $.isPlaying = false;
+  $.clock = null;
+  
+  // 2. Remove old model from scene
+  $.scene.remove(oldModel);
+  
+  // 3. Clean up old helper (MUST null before loadModel to avoid conflict)
+  if ($.helper) {
+    if ($.restPoseQuat) {
+      const bones = oldModel.skeleton.bones;
+      for (let i = 0; i < bones.length; i++) {
+        if ($.restPoseQuat[i]) bones[i].quaternion.copy($.restPoseQuat[i]);
+        if ($.restPosePos[i]) bones[i].position.copy($.restPosePos[i]);
+      }
+    }
+    $.helper.remove(oldModel);
+    removeStageCollision();
+    $.helper = null;
+  }
+  
+  // 4. Re-load fresh model (creates new $.helper, new $.model)
+  showLoading(true, '重新加载模型中...');
+  try {
+    await loadModel(modelPath);
+  } catch (e) {
+    // FAILED: restore old model
+    $.scene.add(oldModel);
+    $.model = oldModel;
+    if (!$.helper) {
+      $.helper = new THREE.MMDAnimationHelper({ afterglow: 2.0, resetPhysicsOnLoop: false });
+      $.helper.add(oldModel, { physics: true, unitStep: 1 / 120, maxStepNum: 5 });
+      $.helper.enabled.physics = $.physics;
+    }
+    showLoading(false);
+    setViewerStatus('❌ 重新加载失败: ' + (e.message || ''));
+    addChatMessage('error', '❌ 重新加载失败: ' + (e.message || ''));
+    return;
+  }
+  
+  // 5. Success — dispose old model
+  if (oldModel) {
+    try {
+      oldModel.traverse(child => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+          else child.material.dispose();
+        }
+        if (child.texture) child.texture.dispose();
+      });
+    } catch(e) { console.warn('[reload] old model dispose error:', e.message); }
+  }
+  
+  // 6. Re-init controllers
+  try {
+    $.materialMorphController = new MaterialMorphController($.model);
+  } catch(e) {
+    console.warn('[reload] MaterialMorphController init failed:', e.message);
+    $.materialMorphController = null;
+  }
+  try {
+    $.expressionController = new ExpressionController($.model);
+  } catch(e) {
+    console.warn('[reload] ExpressionController init failed:', e.message);
+    $.expressionController = null;
+  }
+  window.materialMorphController = $.materialMorphController;
+  window.expressionController = $.expressionController;
+  
+  // 重新检测 morph 面板
+  detectModelMorphs();
+  
+  // 重新应用本影滑块
+  var shadowSlider2 = document.getElementById('shadow-intensity');
+  if (shadowSlider2) updateShadowIntensity(shadowSlider2.value);
+  
+  setTimeout(function() { addStageCollision(); }, 500);
+  
+  showLoading(false);
+  setViewerStatus('✅ 模型已重新加载');
+  setExprTags('neutral', null);
+  $.currentExpression = 'neutral';
+  $.currentAction = 'stand';
+  addChatMessage('system', '🔄 模型已重新加载');
+}
+window.reloadModel = reloadModel;
+
+// ============================================================
+// Model Selector
+// ============================================================
+async function loadModelList() {
+  try {
+    const resp = await fetch('/api/models');
+    const models = await resp.json();
+    const sel = document.getElementById('model-select');
+    const currentValue = sel.value;
+    sel.innerHTML = '';
+    for (const m of models) {
+      const opt = document.createElement('option');
+      opt.value = m.path;
+      opt.textContent = '🎭 ' + m.name;
+      sel.appendChild(opt);
+    }
+    // Restore previous selection if still valid, otherwise keep first
+    if (models.some(m => m.path === currentValue)) {
+      sel.value = currentValue;
+    }
+    // If no models found, keep default
+    if (models.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '../assets/mmd_model/绯英/绯英.pmx';
+      opt.textContent = '🎭 绯英';
+      sel.appendChild(opt);
+    }
+  } catch(e) {
+    console.log('模型列表加载失败:', e.message);
+  }
+}
+
+function onModelSelect() {
+  const path = document.getElementById('model-select').value;
+  if (path && $.model) {
+    reloadModel(path);
+  }
+}
+window.onModelSelect = onModelSelect;
+
+function browseModelFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.pmx,.zip';
+  input.onchange = async function() {
+    const file = input.files[0];
+    if (!file) return;
+    
+    if (file.name.toLowerCase().endsWith('.zip')) {
+      // ZIP: upload to server for extraction
+      await uploadModelZip(file);
+    } else {
+      // PMX: load directly
+      loadPmxDirect(file);
+    }
+  };
+  input.click();
+}
+
+async function uploadModelZip(file) {
+  addChatMessage('system', '📦 正在上传并解压: ' + file.name + '...');
+  showLoading(true, '解压模型中: ' + file.name);
+  
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    const resp = await fetch('/api/models/upload', { method: 'POST', body: formData });
+    const data = await resp.json();
+    
+    showLoading(false);
+    if (!data.ok) {
+      addChatMessage('error', '❌ 导入失败: ' + (data.error || ''));
+      return;
+    }
+    
+    // Refresh model list
+    await loadModelList();
+    // Auto-select the new model
+    const sel = document.getElementById('model-select');
+    sel.value = data.path;
+    // Load it
+    reloadModel(data.path);
+    addChatMessage('system', '✅ 已导入: ' + data.name);
+  } catch(e) {
+    showLoading(false);
+    addChatMessage('error', '❌ 上传失败: ' + (e.message || ''));
+  }
+}
+
+function loadPmxDirect(file) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const blob = new Blob([e.target.result], {type: 'application/octet-stream'});
+    const url = URL.createObjectURL(blob);
+    loadModelFromFile(url, file.name);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function loadModelFromFile(modelUrl, fileName) {
+  if (!$.model) return;
+  const oldModel = $.model;
+  
+  $.isPlaying = false;
+  $.clock = null;
+  $.scene.remove(oldModel);
+  
+  if ($.helper) {
+    if ($.restPoseQuat) {
+      const bones = oldModel.skeleton.bones;
+      for (let i = 0; i < bones.length; i++) {
+        if ($.restPoseQuat[i]) bones[i].quaternion.copy($.restPoseQuat[i]);
+        if ($.restPosePos[i]) bones[i].position.copy($.restPosePos[i]);
+      }
+    }
+    $.helper.remove(oldModel);
+    removeStageCollision();
+    $.helper = null;
+  }
+  
+  showLoading(true, '加载模型中: ' + fileName);
+  try {
+    await new Promise((resolve, reject) => {
+      const loader = new THREE.MMDLoader();
+      loader.load(modelUrl, (mesh) => {
+        try {
+          $.model = mesh;
+          mesh.traverse(child => {
+            if (child.isSkinnedMesh) {
+              var mats = Array.isArray(child.material) ? child.material : [child.material];
+              mats.forEach(function(m) {
+                if (m) {
+                  m.skinning = true;
+                  if (m.shininess !== undefined) m.shininess = 5;
+                  if (m.specular) m.specular.set(0x111111);
+                  // 强制开启描边，覆盖 PMX 文件自带设置
+                  var outlineVal = parseInt(document.getElementById('outline-thickness').value) / 1000;
+                  m.userData.outlineParameters = {
+                    thickness: outlineVal,
+                    color: [0, 0, 0],
+                    alpha: 1.0,
+                    visible: true
+                  };
+                  // 备份 emissive（即 PMX 本影色，已被 MMDLoader 压到 20%）
+                  if (m.emissive) m._baseEmissive = m.emissive.clone();
+                }
+              });
+            }
+          });
+          $.scene.add(mesh);
+          $.restPoseQuat = [];
+          $.restPosePos = [];
+          mesh.skeleton.bones.forEach(b => {
+            $.restPoseQuat.push(b.quaternion.clone());
+            $.restPosePos.push(b.position.clone());
+          });
+          $._legBoneIndices = [];
+          const legNames = ['leg_l', 'leg_r', 'knee_l', 'knee_r', 'ankle_l', 'ankle_r'];
+          mesh.skeleton.bones.forEach((b, i) => {
+            if (legNames.includes(b.name)) $._legBoneIndices.push(i);
+          });
+          $.helper = new THREE.MMDAnimationHelper({ afterglow: 2.0, resetPhysicsOnLoop: false });
+          $.helper.add(mesh, { physics: true, unitStep: 1 / 120, maxStepNum: 5 });
+          $.helper.enabled.physics = true;
+          buildSoftBoneList();
+          window.model = mesh;
+          resolve(mesh);
+        } catch(e) { reject(e); }
+      }, (progress) => {
+        const pct = Math.min(progress.loaded / progress.total * 100, 99);
+        document.getElementById('loading-text').textContent = '🌀 加载模型中... ' + Math.round(pct) + '%';
+        document.getElementById('progress-fill').style.width = pct + '%';
+      }, (err) => reject(err));
+    });
+    
+    oldModel.traverse(child => {
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) {
+        if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+        else child.material.dispose();
+      }
+      if (child.texture) child.texture.dispose();
+    });
+    URL.revokeObjectURL(modelUrl);
+    
+    $.materialMorphController = new MaterialMorphController($.model);
+    $.expressionController = new ExpressionController($.model);
+    window.materialMorphController = $.materialMorphController;
+    window.expressionController = $.expressionController;
+    
+    setTimeout(function() { addStageCollision(); }, 500);
+    
+    showLoading(false);
+    setViewerStatus('✅ 模型已加载: ' + fileName);
+    setExprTags('neutral', null);
+    $.currentExpression = 'neutral';
+    $.currentAction = 'stand';
+    addChatMessage('system', '📂 已加载: ' + fileName);
+  } catch (e) {
+    $.scene.add(oldModel);
+    $.model = oldModel;
+    if (!$.helper) {
+      $.helper = new THREE.MMDAnimationHelper({ afterglow: 2.0, resetPhysicsOnLoop: false });
+      $.helper.add(oldModel, { physics: true, unitStep: 1 / 120, maxStepNum: 5 });
+      $.helper.enabled.physics = $.physics;
+    }
+    URL.revokeObjectURL(modelUrl);
+    showLoading(false);
+    setViewerStatus('❌ 加载失败: ' + (e.message || ''));
+    addChatMessage('error', '❌ 加载失败: ' + (e.message || ''));
+  }
+}
+
+// ============================================================
+// Stage Physics Collision — 防止人物脚部穿透场景地板
+// ============================================================
+function addStageCollision() {
+  if (!$.helper || !$.model || !$.stageModel) return;
+  var obj = $.helper.objects.get($.model);
+  if (!obj || !obj.physics) { console.warn('[NLP] 物理世界未就绪，稍后重试'); setTimeout(addStageCollision, 300); return; }
+  
+  var world = obj.physics.world;
+  var AmmoLib = window.Ammo;
+  if (!AmmoLib || !world) return;
+  
+  // 清除旧碰撞体
+  removeStageCollision();
+  
+  // 计算场景地板位置（使用包围盒底部，但确保不低于人物脚底 y=0）
+  var box = new THREE.Box3().setFromObject($.stageModel);
+  var floorY = Math.max(box.min.y + 0.5, 0);
+  var hw = Math.max((box.max.x - box.min.x) / 2, 1);
+  var hd = Math.max((box.max.z - box.min.z) / 2, 1);
+  
+  var shape = new AmmoLib.btBoxShape(new AmmoLib.btVector3(hw, 0.3, hd));
+  var transform = new AmmoLib.btTransform();
+  transform.setIdentity();
+  transform.setOrigin(new AmmoLib.btVector3(0, floorY, 0));
+  
+  var motionState = new AmmoLib.btDefaultMotionState(transform);
+  var localInertia = new AmmoLib.btVector3(0, 0, 0);
+  var rbInfo = new AmmoLib.btRigidBodyConstructionInfo(0, motionState, shape, localInertia);
+  var body = new AmmoLib.btRigidBody(rbInfo);
+  
+  world.addRigidBody(body);
+  $._stageCollision = { body: body, motionState: motionState, shape: shape };
+  console.log('[NLP] 场景碰撞地板已添加 (Y=' + floorY.toFixed(1) + ', W=' + (hw*2).toFixed(0) + ', D=' + (hd*2).toFixed(0) + ')');
+}
+
+function removeStageCollision() {
+  if (!$._stageCollision) return;
+  var obj = $.helper && $.helper.objects.get($.model);
+  var world = obj && obj.physics && obj.physics.world;
+  if (world) world.removeRigidBody($._stageCollision.body);
+  $._stageCollision = null;
+}
+
+// ============================================================
+// NLP Parser - Natural Language to MPL + Expression
+// ============================================================
+const NLP = {
+  // Expression keywords → expression name mapping
+  expressionMap: {
+    // Chinese
+    '开心': 'happy', '高兴': 'happy', '笑': 'happy', '微笑': 'happy', '乐': 'happy',
+    '哈哈': 'laugh', '大笑': 'laugh', '笑哈哈': 'laugh',
+    '难过': 'sad', '悲伤': 'sad', '伤心': 'sad', '哭': 'tearful', '哭泣': 'tearful',
+    '生气': 'angry', '愤怒': 'angry', '怒': 'angry', '发火': 'angry',
+    '惊讶': 'surprised', '吃惊': 'surprised', '震惊': 'surprised', '吓': 'surprised',
+    '害怕': 'fear', '恐惧': 'fear', '恐怖': 'fear', '怕': 'fear',
+    '厌恶': 'disgust', '恶心': 'disgust', '讨厌': 'disgust',
+    '害羞': 'shy', '羞涩': 'shy', '腼腆': 'shy', '不好意思': 'shy',
+    '可爱': 'cute', '萌': 'cute',
+    '眨眼': 'wink', '眨': 'wink', '抛媚眼': 'wink',
+    '爱心眼': 'heartEyes', '心心眼': 'heartEyes',
+    '星星眼': 'starEyes', '闪亮': 'starEyes',
+    '含泪': 'tearful', '泪眼': 'tearful',
+    '痛苦': 'pain', '疼': 'pain', '痛': 'pain',
+    '坏笑': 'smirk', '奸笑': 'smirk', '邪笑': 'smirk',
+    '困惑': 'confused', '迷惑': 'confused', '不解': 'confused',
+    '吐舌': 'tongueOut', '吐舌头': 'tongueOut', '略': 'tongueOut',
+    '脸红': 'embarrassed', '羞红': 'embarrassed',
+    '傲娇': 'smirk', '不屑': 'disgust', '哼': 'angry',
+    '温柔': 'happy', '平静': 'neutral', '正常': 'neutral', '中性': 'neutral',
+    '恢复': 'neutral', '复位': 'neutral', '重置': 'neutral',
+    // English
+    'happy': 'happy', 'smile': 'happy', 'grin': 'laugh', 'laugh': 'laugh',
+    'sad': 'sad', 'cry': 'tearful', 'unhappy': 'sad',
+    'angry': 'angry', 'mad': 'angry', 'furious': 'angry',
+    'surprised': 'surprised', 'shocked': 'surprised',
+    'scared': 'fear', 'afraid': 'fear', 'fear': 'fear',
+    'disgust': 'disgust', 'gross': 'disgust',
+    'shy': 'shy', 'embarrassed': 'embarrassed', 'bashful': 'shy',
+    'cute': 'cute', 'adorable': 'cute',
+    'wink': 'wink', 'blink': 'blink',
+    'smirk': 'smirk', 'sly': 'smirk',
+    'confused': 'confused', 'puzzled': 'confused',
+    'neutral': 'neutral',
+  },
+  
+  // Action keywords → MPL preset name
+  actionMap: {
+    // Chinese
+    '挥手': 'wave', '招手': 'wave', '挥': 'wave', '打招呼': 'wave',
+    '跳舞': 'dance', '舞': 'dance', '舞蹈': 'dance', '蹦': 'dance',
+    '鞠躬': 'bow', '弯腰': 'bow', '行礼': 'bow', '敬礼': 'bow',
+    '跳跃': 'jump', '跳': 'jump', '蹦跳': 'jump',
+    '飞吻': 'blowKiss', '亲吻': 'blowKiss', '亲': 'blowKiss', '吻': 'blowKiss',
+    '站立': 'stand', '站': 'stand', '立正': 'stand',
+    '扭头': 'turnHead', '转头': 'turnHead', '别头': 'turnHead',
+    '指': 'point', '指向前': 'point',
+    '举手': 'raiseHand',
+    '坐着': 'sit', '蹲': 'sit',
+    '大': 'dazi', '大字': 'dazi',
+    // English  
+    'wave': 'wave', 'hello': 'wave', 'greet': 'wave', 'hi': 'wave',
+    'dance': 'dance', 'dancing': 'dance',
+    'bow': 'bow', 'bow down': 'bow',
+    'jump': 'jump', 'hop': 'jump',
+    'kiss': 'blowKiss', 'blow kiss': 'blowKiss',
+    'stand': 'stand', 'standing': 'stand',
+    'turn head': 'turnHead', 'look away': 'turnHead',
+    'point': 'point',
+  },
+  
+  // MPL code templates
+  mplTemplates: {
+    wave: `@pose wave_pose {
+    shoulder_l turn right 40;
+    arm_l bend forward -30;
+    elbow_l bend forward 120;
+    wrist_l bend forward -30;
+}
+main {
+    wave_pose;
+}`,
+    
+    dance: `@pose p1 {
+    shoulder_l turn right 25;
+    elbow_l bend forward 90;
+    elbow_r bend forward 70;
+    leg_l turn left 10;
+}
+@pose p2 {
+    elbow_l bend forward 130;
+    elbow_r bend forward 40;
+    leg_r turn right 10;
+    head turn left 5;
+}
+@pose p3 {
+    arm_l bend forward -20;
+    arm_r bend forward 20;
+    elbow_l bend forward 60;
+    leg_l turn left 8;
+}
+@pose p4 {
+    elbow_l bend forward 100;
+    arm_r bend forward -15;
+    leg_r turn right 8;
+    head turn right 5;
+}
+@animation dance_anim {
+    0: p1;
+    0.5: p2;
+    1: p3;
+    1.5: p4;
+    2: p1;
+    2.5: p2;
+    3: p3;
+}
+main {
+    dance_anim;
+}`,
+    
+    bow: `@pose bow_pose {
+    upper_body bend forward 60;
+    head bend forward 40;
+    arm_l bend forward 10;
+    arm_r bend forward 10;
+}
+main {
+    bow_pose;
+}`,
+    
+    jump: `@pose jump_pose {
+    leg_l bend forward -20;
+    leg_r bend forward -20;
+    arm_l bend forward -40;
+    arm_r bend forward -40;
+    elbow_l bend forward 50;
+    elbow_r bend forward 50;
+}
+main {
+    jump_pose;
+}`,
+    
+    blowKiss: `@pose kiss_pose {
+    arm_l bend forward -50;
+    elbow_l bend forward 60;
+    wrist_l bend forward 20;
+    head bend forward 5;
+}
+main {
+    kiss_pose;
+}`,
+    
+    stand: `@pose stand_pose {
+    shoulder_l sway right 1;
+    shoulder_r sway left 1;
+    arm_l bend forward 20;
+    arm_r bend forward 20;
+    elbow_l bend forward 6;
+    elbow_r bend forward 6;
+    wrist_l turn right 5;
+    wrist_r turn left 5;
+}
+main {
+    stand_pose;
+}`,
+    
+    turnHead: `@pose turn_pose {
+    head turn right 40;
+    neck turn right 20;
+}
+main {
+    turn_pose;
+}`,
+    
+    point: `@pose point_pose {
+    arm_l bend forward -60;
+    elbow_l bend forward 30;
+    wrist_l bend forward -20;
+}
+main {
+    point_pose;
+}`,
+    
+    raiseHand: `@pose raise_pose {
+    arm_r bend forward -80;
+    elbow_r bend forward 10;
+}
+main {
+    raise_pose;
+}`
+  },
+  
+  // Parse natural language input
+  parse(input) {
+    const text = input.toLowerCase().trim();
+    if (!text) return null;
+    
+    let expression = null;
+    let action = null;
+    let mplCode = null;
+    
+    // Step 1: Check for expression keywords
+    let bestExprScore = 0;
+    for (const [keyword, exprName] of Object.entries(this.expressionMap)) {
+      if (text.includes(keyword)) {
+        const score = keyword.length;  // Longer match = better
+        if (score > bestExprScore) {
+          bestExprScore = score;
+          expression = exprName;
+        }
+      }
+    }
+    
+    // Step 2: Check for action keywords
+    let bestActionScore = 0;
+    for (const [keyword, actionName] of Object.entries(this.actionMap)) {
+      if (text.includes(keyword)) {
+        const score = keyword.length;
+        if (score > bestActionScore) {
+          bestActionScore = score;
+          action = actionName;
+        }
+      }
+    }
+    
+    // Step 3: Generate MPL code
+    if (action && this.mplTemplates[action]) {
+      mplCode = this.mplTemplates[action];
+    }
+    
+    // Step 4: Smart defaults
+    // If no expression specified but action is present, try to infer
+    if (!expression && action) {
+      if (action === 'dance') expression = 'happy';
+      if (action === 'wave' && text.includes('害羞')) expression = 'shy';
+      if (action === 'wave' && text.includes('傲娇')) expression = 'smirk';
+      if (action === 'turnHead' && text.includes('傲娇')) expression = 'smirk';
+      if (action === 'turnHead' && text.includes('害羞')) expression = 'shy';
+      if (action === 'blowKiss') expression = 'cute';
+    }
+    
+    // If no action but expression present, just do expression
+    if (!action && !expression) {
+      return { type: 'unknown', message: '抱歉，我不太理解这个指令。试试说「微笑」「挥手」或「开心地跳舞」？' };
+    }
+    
+    return {
+      type: 'ok',
+      expression: expression,
+      action: action,
+      mplCode: mplCode,
+      raw: input
+    };
+  }
+};
+
+// ============================================================
+// 🤖 LLM 大模型对话
+// ============================================================
+
+// 对话历史（内存中保存，用于 LLM 上下文）
+const _chatHistory = [];
+
+// 页面加载时从服务器读取 LLM 配置
+async function loadLLMConfig() {
+  try {
+    const resp = await fetch('/api/llm/config');
+    const cfg = await resp.json();
+    document.getElementById('llm-settings-provider').value = cfg.active_provider || cfg.provider || 'ollama';
+    document.getElementById('llm-settings-url').value = cfg.base_url || '';
+    document.getElementById('llm-settings-apikey').value = cfg.api_key || '';
+    document.getElementById('llm-settings-model').value = cfg.model || '';
+    
+    document.getElementById('llm-provider').value = cfg.active_provider || 'ollama';
+    onSettingsProviderChange();
+    updateLLMStatus();
+  } catch(e) {
+    console.log('LLM 配置加载失败（服务器可能未启动）:', e.message);
+  }
+}
+
+// 更新 LLM 状态显示
+function updateLLMStatus() {
+  const enabled = document.getElementById('llm-enabled').checked;
+  const provider = document.getElementById('llm-provider').value;
+  const el = document.getElementById('llm-status');
+  const names = { ollama: 'Ollama', deepseek: 'DeepSeek', custom: '自定义' };
+  el.textContent = enabled ? `🟢 ${names[provider] || provider}` : '⚫ 未启用';
+  el.style.color = enabled ? 'var(--success)' : 'var(--text-dim)';
+  
+  // 更新 placeholder
+  const input = document.getElementById('nl-input');
+  input.placeholder = enabled ? '跟绯英聊天... (Enter 发送)' : '输入自然语言指令... (Enter 发送)';
+}
+
+function onLLMToggle() {
+  updateLLMStatus();
+}
+
+function onProviderChange() {
+  document.getElementById('llm-settings-provider').value = document.getElementById('llm-provider').value;
+  onSettingsProviderChange();
+  updateLLMStatus();
+}
+
+function onSettingsProviderChange() {
+  const provider = document.getElementById('llm-settings-provider').value;
+  const urlInput = document.getElementById('llm-settings-url');
+  const keyRow = document.getElementById('llm-apikey-row');
+  
+  if (provider === 'ollama') {
+    urlInput.placeholder = 'http://localhost:11434/v1';
+    urlInput.value = urlInput.value || 'http://localhost:11434/v1';
+    keyRow.style.display = 'none';
+  } else if (provider === 'deepseek') {
+    urlInput.placeholder = 'https://api.deepseek.com';
+    urlInput.value = urlInput.value || 'https://api.deepseek.com';
+    keyRow.style.display = 'block';
+  } else {
+    urlInput.placeholder = 'https://api.openai.com/v1';
+    keyRow.style.display = 'block';
+  }
+}
+
+function showLLMSettings() {
+  document.getElementById('llm-settings-overlay').style.display = 'flex';
+  // 同步当前值
+  const cfg = {
+    provider: document.getElementById('llm-provider').value,
+    model: document.getElementById('llm-settings-model').value,
+    url: document.getElementById('llm-settings-url').value,
+    apikey: document.getElementById('llm-settings-apikey').value
+  };
+  if (!cfg.url) onSettingsProviderChange();
+}
+
+function hideLLMSettings() {
+  document.getElementById('llm-settings-overlay').style.display = 'none';
+}
+
+function toggleApiKeyVisibility() {
+  const el = document.getElementById('llm-settings-apikey');
+  el.type = el.type === 'password' ? 'text' : 'password';
+}
+
+async function testLLMConnection() {
+  const resultEl = document.getElementById('llm-settings-test-result');
+  resultEl.textContent = '⏳ 测试中...';
+  resultEl.style.color = 'var(--accent2)';
+  
+  try {
+    const provider = document.getElementById('llm-settings-provider').value;
+    const base_url = document.getElementById('llm-settings-url').value.trim();
+    const api_key = document.getElementById('llm-settings-apikey').value.trim();
+    const model = document.getElementById('llm-settings-model').value.trim();
+    
+    const resp = await fetch('/api/llm/test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider, base_url, api_key, model })
+    });
+    const data = await resp.json();
+    
+    if (data.ok) {
+      resultEl.textContent = `✅ 连接成功！模型: ${data.model}, 延迟: ${data.latency_ms}ms`;
+      resultEl.style.color = 'var(--success)';
+    } else {
+      resultEl.textContent = '❌ ' + (data.error || '连接失败');
+      resultEl.style.color = 'var(--danger)';
+    }
+  } catch(e) {
+    resultEl.textContent = '❌ ' + e.message;
+    resultEl.style.color = 'var(--danger)';
+  }
+}
+
+async function saveLLMSettings() {
+  const provider = document.getElementById('llm-settings-provider').value;
+  const base_url = document.getElementById('llm-settings-url').value.trim();
+  const api_key = document.getElementById('llm-settings-apikey').value.trim();
+  const model = document.getElementById('llm-settings-model').value.trim();
+  
+  try {
+    const resp = await fetch('/api/llm/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        active_provider: provider,
+        provider: provider,
+        base_url: base_url,
+        api_key: api_key,
+        model: model
+      })
+    });
+    
+    const data = await resp.json();
+    if (!data.ok) {
+      addChatMessage('error', '❌ 保存失败: ' + (data.error || '未知错误'));
+      return;
+    }
+    
+    // 同步到快捷选择
+    document.getElementById('llm-provider').value = provider;
+    updateLLMStatus();
+    hideLLMSettings();
+    
+    addChatMessage('system', '✅ LLM 设置已保存');
+  } catch(e) {
+    addChatMessage('error', '❌ 保存失败: ' + (e.message || '网络错误'));
+  }
+}
+
+// LLM 模式下的发送
+async function sendLLM(text) {
+  const btn = document.getElementById('btn-send');
+  btn.disabled = true;
+  
+  addChatMessage('user', text);
+  _chatHistory.push({ role: 'user', content: text });
+  
+  // 显示"思考中"
+  const thinkingId = 'thinking-' + Date.now();
+  const historyEl = document.getElementById('chat-history');
+  const thinkDiv = document.createElement('div');
+  thinkDiv.className = 'chat-msg system';
+  thinkDiv.id = thinkingId;
+  thinkDiv.innerHTML = '<div class="bubble">🤔 绯英正在思考...</div>';
+  historyEl.appendChild(thinkDiv);
+  historyEl.scrollTop = historyEl.scrollHeight;
+  
+  try {
+    const resp = await fetch('/api/llm/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, history: _chatHistory.slice(0, -1) })
+    });
+    
+    // 移除"思考中"
+    const thinkEl = document.getElementById(thinkingId);
+    if (thinkEl) thinkEl.remove();
+    
+    if (!resp.ok) {
+      const err = await resp.json();
+      addChatMessage('error', '❌ ' + (err.error || '服务器错误'));
+      return;
+    }
+    
+    const data = await resp.json();
+    
+    console.log('[LLM] Response:', { reply: data.reply?.substring(0,80), expression: data.expression, mplCode: !!data.mplCode, animData: !!data.animData, compileError: data.compileError });
+    
+    // 显示 AI 回复
+    if (data.reply) {
+      addChatMessage('system', data.reply);
+      _chatHistory.push({ role: 'assistant', content: data.reply });
+    }
+    
+    // 应用表情
+    if (data.expression && $.expressionController) {
+      $.expressionController.setExpression(data.expression);
+      setExprTags(data.expression, null);
+    }
+    
+    // 编译并播放 MPL（全走 WASM 编译器）
+    if (data.mplCode && $.compiler) {
+      try {
+        compileAndPlayMPL(data.mplCode);
+        setViewerStatus('🎬 播放中');
+        if (document.getElementById('show-mpl').checked) {
+          document.getElementById('raw-mpl').value = data.mplCode;
+        }
+        setExprTags(data.expression || 'neutral', data.action || 'mpl');
+      } catch(e) {
+        console.warn('[LLM] MPL compile error:', e.message);
+        addChatMessage('error', '⚠️ 动作编译失败: ' + (e.message || ''));
+      }
+    }
+    
+  } catch(e) {
+    const thinkEl = document.getElementById(thinkingId);
+    if (thinkEl) thinkEl.remove();
+    
+    const errMsg = e.message || '网络错误';
+    addChatMessage('error', '❌ LLM 连接失败: ' + errMsg + '\n请检查服务器和 API 设置');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('nl-input').focus();
+  }
+}
+
+// ============================================================
+// Main Send Handler
+// ============================================================
+async function sendNL(text) {
+  if (!text) {
+    text = document.getElementById('nl-input').value.trim();
+    document.getElementById('nl-input').value = '';
+  }
+  if (!text) return;
+  
+  addChatMessage('user', text);
+  document.getElementById('nl-input').value = '';
+  
+  const btn = document.getElementById('btn-send');
+  btn.disabled = true;
+  
+  try {
+    // ===== LLM Mode =====
+    if (document.getElementById('llm-enabled').checked) {
+      await sendLLM(text);
+      return;
+    }
+    
+    // ===== NEW: Detect raw MPL code and compile directly =====
+    if (isMPLCode(text)) {
+      compileAndPlayMPL(text);
+      setViewerStatus('🎬 播放中: 直接 MPL');
+      setExprTags('neutral', null);
+      addChatMessage('system', '✅ 直接 MPL 编译成功');
+      document.getElementById('raw-mpl').value = text;
+      document.getElementById('raw-mpl-area').classList.add('show');
+      document.getElementById('show-mpl').checked = true;
+      return;
+    }
+    // ========================================================
+    
+    const result = NLP.parse(text);
+    
+    if (!result || result.type === 'unknown') {
+      addChatMessage('error', result?.message || '无法理解这个指令 😕');
+      btn.disabled = false;
+      return;
+    }
+    
+    // Show raw MPL if toggled
+    if (result.mplCode && document.getElementById('show-mpl').checked) {
+      document.getElementById('raw-mpl').value = result.mplCode;
+    }
+    
+    // Build response message
+    let parts = [];
+    if (result.expression) {
+      const exprDesc = $.expressionController?.expressions[result.expression]?.desc || result.expression;
+      parts.push('表情：' + exprDesc);
+    }
+    if (result.action) {
+      parts.push('动作：' + result.action);
+    }
+    
+    // Execute expression
+    if (result.expression && $.expressionController) {
+      $.expressionController.setExpression(result.expression);
+    } else if (!result.expression && $.expressionController && $.currentExpression !== 'neutral') {
+      // Reset to neutral if only action
+      $.expressionController.setExpression('neutral');
+    }
+    
+    // Execute MPL
+    if (result.action === 'dazi') {
+      applyDaziPose();
+    } else if (result.mplCode && $.compiler) {
+      compileAndPlayMPL(result.mplCode);
+      setViewerStatus('🎬 播放中: ' + (result.action || result.expression || text));
+    } else {
+      setViewerStatus('😐 表情已更新');
+    }
+    
+    // Update status tags
+    setExprTags(result.expression || 'neutral', result.action || null);
+    
+    // Chat response
+    if (parts.length > 0) {
+      addChatMessage('system', '✅ ' + parts.join(' | '));
+    } else {
+      addChatMessage('system', '✅ 已执行');
+    }
+    
+  } catch (e) {
+    const errMsg = (e instanceof Error) ? e.message : String(e || '未知错误');
+    console.error('[NLP] Error:', errMsg, e);
+    addChatMessage('error', '❌ 出错了: ' + errMsg);
+  } finally {
+    btn.disabled = false;
+    document.getElementById('nl-input').focus();
+  }
+}
+
+// Expose to global
+window.sendNL = sendNL;
+
+// ============================================================
+// Render Loop
+// ============================================================
+function animate(now = 0) {
+  requestAnimationFrame(animate);
+  
+  const interval = ($.isPlaying || $.physics) ? FRAME_INTERVAL : IDLE_INTERVAL;
+  if (now - $._lastFrameTime < interval) return;
+  $._lastFrameTime = now;
+  
+  if ($.helper) {
+    $.helper.update($.clock ? $.clock.getDelta() : 0.016);
+    
+    // Soft constraints: prevent soft parts from over-stretching
+    applySoftConstraints($.clock ? $.clock.getDelta() : 0.016);
+  }
+  if ($.outlineEffect && $.scene && $.camera) {
+    $.outlineEffect.render($.scene, $.camera);
+  } else if ($.renderer && $.scene && $.camera) {
+    $.renderer.render($.scene, $.camera);
+  }
+}
+
+// Enable IK only when all leg bones are at rest pose
+function autoControlIK() {
+  if (!$.model || !$._legBoneIndices || !$._legBoneIndices.length || !$.restPoseQuat) return;
+  const THRESHOLD = 0.999;  // dot ≈ cos(2.5°), tolerate tiny idle drift
+  const bones = $.model.skeleton.bones;
+  let allAtRest = true;
+  for (const idx of $._legBoneIndices) {
+    const restQ = $.restPoseQuat[idx];
+    if (!restQ) continue;
+    const curQ = bones[idx].quaternion;
+    const dot = Math.abs(curQ.x * restQ.x + curQ.y * restQ.y + curQ.z * restQ.z + curQ.w * restQ.w);
+    if (dot < THRESHOLD) { allAtRest = false; break; }
+  }
+  $.helper.enabled.ik = allAtRest;
+}
+
+// ============================================================
+// Startup
+// ============================================================
+(async function main() {
+  // 1. Init WASM Compiler
+  showLoading(true, '加载 MPL WASM 编译器...');
+  try {
+    const CompilerClass = await Promise.race([
+      initMPLCompiler('js/mmd_mpl_bg.wasm?v=202'),
+      new Promise(function(_, reject) { setTimeout(function() { reject(new Error('WASM timeout')); }, 8000); })
+    ]);
+    $.compiler = new CompilerClass();
+    const bones = $.compiler.get_all_bones();
+    console.log('[NLP] MPL 编译器就绪, ' + bones.length + ' 骨骼');
+    // Verify IK bones exist
+    var ikInBones = bones.filter(function(b) { return b.indexOf('ik') !== -1 || b.indexOf('IK') !== -1; });
+    console.log('[NLP] IK 骨骼: ' + (ikInBones.length ? ikInBones.join(', ') : '❌ 没有找到！'));
+  } catch (e) {
+    showLoading(false);
+    setViewerStatus('❌ 编译器加载失败: ' + e.message);
+    console.error(e);
+    return;
+  }
+  
+  // 2. Init 3D Scene
+  showLoading(true, '初始化 3D 场景...');
+  initScene();
+  
+  // 3. Load Model
+  showLoading(true, '加载模型中...');
+  try {
+    await loadModel();
+    
+    // 4. Load Stage (after model, so scene is visible on top)
+    // loadStageModel();  // disabled - using background image instead
+    
+    // 5. Init Controllers
+    $.materialMorphController = new MaterialMorphController($.model);
+    $.expressionController = new ExpressionController($.model);
+    
+    // Expose
+    window.materialMorphController = $.materialMorphController;
+    window.expressionController = $.expressionController;
+    window._nlp = $;
+    
+    // 检测模型 morph 并启用表情面板
+    detectModelMorphs();
+    
+    // 首次应用本影滑块（默认 100%）
+    updateShadowIntensity(document.getElementById('shadow-intensity').value);
+    
+    showLoading(false);
+    setViewerStatus('✅ 就绪 — 在右侧输入自然语言控制角色');
+    
+    // 加载 LLM 配置
+    loadLLMConfig();
+    // 加载模型列表
+    loadModelList();
+    // 自动加载灯光配置
+    setTimeout(function(){ autoLoadConfig(); }, 2000);
+    
+    // 6. Start Render Loop
+    requestAnimationFrame(animate);
+    
+  } catch (e) {
+    showLoading(false);
+    setViewerStatus('❌ 模型加载失败: ' + e.message);
+    console.error(e);
+  }
+})();
+
+// ============================================================
+// Lighting Control Panel
+// ============================================================
+function toggleLightPanel() {
+  document.getElementById('light-panel').classList.toggle('collapsed');
+}
+
+// Color temperature → white-balance shift for lights
+function kelvinToColor(k) {
+  var neutral = 5500;
+  var t = (k - 2000) / 8000;
+  t = Math.max(0, Math.min(1, t));
+  var tn = (neutral - 2000) / 8000;
+  var r = 1, g = 1, b = 1;
+  if (t < tn) {
+    var s = (tn - t) / tn;
+    g = 1 - s * 0.35;
+    b = 1 - s * 0.65;
+  } else if (t > tn) {
+    var s = (t - tn) / (1 - tn);
+    r = 1 - s * 0.4;
+    g = 1 - s * 0.15;
+  }
+  return new THREE.Color(r, g, b);
+}
+
+// Get currently selected material entry from dropdown
+function getSelectedMat() {
+  var sel = document.getElementById('sel-material');
+  if (!sel || !sel.value || !$._stageMaterials) return null;
+  var idx = parseInt(sel.value);
+  return $._stageMaterials.find(function(e){return e.index===idx;}) || null;
+}
+
+// Populate dropdown from registry
+function populateMaterialDropdown() {
+  var sel = document.getElementById('sel-material');
+  if (!sel || !$._stageMaterials || !$._stageMaterials.length) return;
+  sel.innerHTML = '';
+  $._stageMaterials.forEach(function(e){
+    var opt = document.createElement('option');
+    opt.value = e.index;
+    opt.textContent = '[' + e.index + '] ' + e.name;
+    sel.appendChild(opt);
+  });
+  if ($._selMatName) {
+    var dflt = $._stageMaterials.find(function(e){return e.name===$._selMatName;});
+    if (dflt) sel.value = dflt.index;
+  }
+  onMatSelect();
+}
+
+// ── Material panel collapse ──
+function toggleMatPanel() {
+  document.getElementById('mat-panel-header').classList.toggle('collapsed');
+  document.getElementById('mat-body').classList.toggle('collapsed');
+}
+
+// Material selection → sync all sliders to material's current state
+function onMatSelect() {
+  var entry = getSelectedMat();
+  if (!entry) return;
+  var m = entry.mat;
+  // Wire emissiveMap
+  if (!m.emissiveMap && m.map) m.emissiveMap = m.map;
+  // Fix front-face gray: ensure depth writing unless user explicitly disabled it
+  if (m.depthWrite === false) { m.depthWrite = true; m.needsUpdate = true; }
+  // Sync sliders
+  document.getElementById('rng-roughness').value = Math.round(m.roughness * 100);
+  document.getElementById('val-roughness').textContent = m.roughness.toFixed(2);
+  document.getElementById('rng-metalness').value = Math.round(m.metalness * 100);
+  document.getElementById('val-metalness').textContent = m.metalness.toFixed(2);
+  document.getElementById('rng-envmap').value = Math.round((m.envMapIntensity || 0) * 10);
+  document.getElementById('val-envmap').textContent = (m.envMapIntensity || 0).toFixed(1);
+  document.getElementById('rng-opacity').value = Math.round((m.opacity || 1) * 100);
+  document.getElementById('val-opacity').textContent = (m.opacity || 1).toFixed(2);
+  document.getElementById('inp-emissive-hex').value = '#' + m.emissive.getHexString();
+  document.getElementById('rng-emissive').value = Math.round(m.emissiveIntensity * 10);
+  document.getElementById('val-emissive').textContent = m.emissiveIntensity.toFixed(1);
+  document.getElementById('chk-transparent').checked = !!m.transparent;
+  document.getElementById('chk-depthWrite').checked = !!m.depthWrite;
+}
+
+// Any material slider changed → apply to material
+function onMatParamChange() {
+  var entry = getSelectedMat();
+  if (!entry) return;
+  var m = entry.mat;
+  m.roughness = parseInt(document.getElementById('rng-roughness').value) / 100;
+  document.getElementById('val-roughness').textContent = m.roughness.toFixed(2);
+  m.metalness = parseInt(document.getElementById('rng-metalness').value) / 100;
+  document.getElementById('val-metalness').textContent = m.metalness.toFixed(2);
+  m.envMapIntensity = parseInt(document.getElementById('rng-envmap').value) / 10;
+  document.getElementById('val-envmap').textContent = m.envMapIntensity.toFixed(1);
+  m.opacity = parseInt(document.getElementById('rng-opacity').value) / 100;
+  document.getElementById('val-opacity').textContent = m.opacity.toFixed(2);
+  var hex = document.getElementById('inp-emissive-hex').value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(hex)) m.emissive.set(hex);
+  m.emissiveIntensity = parseInt(document.getElementById('rng-emissive').value) / 10;
+  document.getElementById('val-emissive').textContent = m.emissiveIntensity.toFixed(1);
+  m.transparent = document.getElementById('chk-transparent').checked;
+  m.depthWrite = document.getElementById('chk-depthWrite').checked;
+  m.needsUpdate = true;
+  debouncedSave();
+}
+
+// ── Rim Light + Specular shader injection ──
+
+// ── www-genshin toon lighting (replaces PBR direct) ──
+function injectGenshinToon(mesh) {
+  var count = 0;
+  mesh.traverse(function(child) {
+    if (!child.isMesh) return;
+    var mats = Array.isArray(child.material) ? child.material : [child.material];
+    mats.forEach(function(mat) {
+      if (!mat || mat.type !== 'MeshStandardMaterial') return;
+      mat.onBeforeCompile = function(shader) {
+        var frag = shader.fragmentShader;
+        // ① Inject toon direct light + #define override
+        frag = frag.replace('#include <lights_physical_pars_fragment>',
+          '#include <lights_physical_pars_fragment>\n' +
+          'vec3 fresnelCol = vec3(17.0, 46.0, 174.0) / 255.0 * 5.0;\n' +
+          'void RE_Direct_ToonPhysical(const in IncidentLight d, const in GeometricContext g, const in PhysicalMaterial m, const in float metal, inout ReflectedLight r) {\n' +
+          '  float dotNL = saturate(dot(g.normal, d.direction));\n' +
+          '  float dotNL_toon = smoothstep(0.25, 0.27, dotNL);\n' +
+          '  vec3 irr = dotNL_toon * d.color;\n' +
+          '  float nr = (1.0 - step(0.01, metal)) * pow(m.roughness, 0.4) + step(0.01, metal) * pow(m.roughness, 1.4);\n' +
+          '  r.directSpecular += irr * BRDF_GGX(d.direction, g.viewDir, g.normal, m.specularColor, m.specularF90, nr);\n' +
+          '  r.directDiffuse += irr * BRDF_Lambert(m.diffuseColor);\n' +
+          '  float fk = 1.0 - smoothstep(0.0, 0.3, dot(g.normal, d.direction));\n' +
+          '  float ft = clamp(1.0 - dot(g.viewDir, g.normal), 0.0, 1.0) * fk;\n' +
+          '  r.directDiffuse += fresnelCol * pow(ft, 4.5) * 0.8;\n' +
+          '}\n' +
+          '#define RE_Direct RE_Direct_ToonPhysical\n'
+        );
+        // ② Simplified lighting loop (dir + point)
+        frag = frag.replace('#include <lights_fragment_begin>',
+          'GeometricContext geometry;\n' +
+          'geometry.position = -vViewPosition;\n' +
+          'geometry.normal = normal;\n' +
+          'geometry.viewDir = normalize(vViewPosition);\n' +
+          'IncidentLight directLight;\n' +
+          '#if NUM_DIR_LIGHTS > 0\n' +
+          'DirectionalLight directionalLight;\n' +
+          'for (int i = 0; i < NUM_DIR_LIGHTS; i++) {\n' +
+          '  directionalLight = directionalLights[i];\n' +
+          '  getDirectionalLightInfo(directionalLight, geometry, directLight);\n' +
+          '  RE_Direct(directLight, geometry, material, reflectedLight);\n' +
+          '}\n' +
+          '#endif\n' +
+          '#if NUM_POINT_LIGHTS > 0\n' +
+          'PointLight pointLight;\n' +
+          'for (int i = 0; i < NUM_POINT_LIGHTS; i++) {\n' +
+          '  pointLight = pointLights[i];\n' +
+          '  getPointLightInfo(pointLight, geometry, directLight);\n' +
+          '  RE_Direct(directLight, geometry, material, reflectedLight);\n' +
+          '}\n' +
+          '#endif\n'
+        );
+        shader.fragmentShader = frag;
+        count++;
+      };
+    });
+  });
+  console.log('[GenshinToon] Injected into ' + count + ' stage materials');
+}
+
+// ── Auto roughness maps from color textures ──
+function generateAllRoughnessMaps(mesh) {
+  var count = 0;
+  mesh.traverse(function(child) {
+    if (!child.isMesh) return;
+    var mats = Array.isArray(child.material) ? child.material : [child.material];
+    mats.forEach(function(mat, i) {
+      if (!mat || !mat.map || !mat.map.image || mat._roughnessGenerated) return;
+      // Skip materials with intentional roughness overrides
+      if (mat._skipRoughnessMap) return;
+      var img = mat.map.image;
+      if (!img.width) return;
+      try {
+        var c = document.createElement('canvas');
+        c.width = img.width; c.height = img.height;
+        var ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        var data = ctx.getImageData(0, 0, c.width, c.height);
+        for (var j = 0; j < data.data.length; j += 4) {
+          var lum = (data.data[j] * 0.299 + data.data[j+1] * 0.587 + data.data[j+2] * 0.114) / 255;
+          var r = Math.round((1.0 - lum) * 255);
+          data.data[j] = r; data.data[j+1] = r; data.data[j+2] = r;
+        }
+        ctx.putImageData(data, 0, 0);
+        var roughTex = new THREE.CanvasTexture(c);
+        roughTex.encoding = THREE.LinearEncoding;
+        mat.roughnessMap = roughTex;
+        mat.roughness = 0.7;
+        mat._roughnessGenerated = true;
+        mat.needsUpdate = true;
+        count++;
+      } catch(e) {}
+    });
+  });
+  console.log('[Roughness] 生成了 ' + count + ' 张粗糙度图');
+}
+function injectToonFX(mesh) {
+  // Store uniforms for panel control
+  $._rimSpecUniforms = {};
+  mesh.traverse(function(child) {
+    if (!child.isMesh || !child.material) return;
+    var mats = Array.isArray(child.material) ? child.material : [child.material];
+    mats.forEach(function(mat) {
+      if (!mat || mat.type !== 'MeshToonMaterial') return;
+      mat.onBeforeCompile = function(shader) {
+        // ── Uniforms ──
+        shader.uniforms.rimColor = { value: new THREE.Color(0xffffff) };
+        shader.uniforms.rimPower = { value: 4.5 };
+        shader.uniforms.rimIntensity = { value: 0.0 };
+        shader.uniforms.specColor = { value: new THREE.Color(0xffffff) };
+        shader.uniforms.specIntensity = { value: 0.0 };
+        shader.uniforms.specShininess = { value: 32.0 };
+        shader.uniforms.unlitMode = { value: 0 };
+        // Keep first reference for panel
+        if (!$._rimSpecUniforms.rimColor) $._rimSpecUniforms = shader.uniforms;
+        // ── Inject GLSL ──
+        shader.fragmentShader = shader.fragmentShader.replace(
+          '#include <common>',
+          '#include <common>\n' +
+          'uniform vec3 rimColor;\n' +
+          'uniform float rimPower;\n' +
+          'uniform float rimIntensity;\n' +
+          'uniform vec3 specColor;\n' +
+          'uniform float specIntensity;\n' +
+          'uniform float specShininess;\n' +
+          'uniform float unlitMode;\n'
+        );
+        // Inject rim + spec + unlit mode before final output
+        shader.fragmentShader = shader.fragmentShader.replace(
+          'gl_FragColor = vec4( outgoingLight, diffuseColor.a );',
+          '  float dotNL_raw = dot(normal, directionalLights[0].direction);\n' +
+          '  if (unlitMode > 0.5) {\n' +
+          // ── Unlit: pure texture color, bright side gets slight boost ──
+          '    float bright = 0.5 + 0.5 * smoothstep(-0.2, 0.2, dotNL_raw);\n' +
+          '    outgoingLight = diffuseColor.rgb * (0.8 + 0.4 * bright);\n' +
+          '  } else {\n' +
+          // ── Lit: normal lighting + rim + spec ──
+          '    float darkSide = 1.0 - smoothstep(0.0, 0.3, dotNL_raw);\n' +
+          '    float fresnel = clamp(1.0 - dot(normalize(vViewPosition), normal), 0.0, 1.0);\n' +
+          '    float rim = pow(fresnel, rimPower) * rimIntensity * darkSide;\n' +
+          '    outgoingLight += rim * rimColor * diffuseColor.rgb;\n' +
+          '    vec3 halfVec = normalize(directionalLights[0].direction + normalize(vViewPosition));\n' +
+          '    float spec = pow(max(dot(normal, halfVec), 0.0), specShininess);\n' +
+          '    spec = step(0.5, spec) * specIntensity * max(0.0, dotNL_raw);\n' +
+          '    outgoingLight += spec * specColor;\n' +
+          '  }\n' +
+          '  gl_FragColor = vec4( outgoingLight, diffuseColor.a );'
+        );
+      };
+    });
+  });
+  console.log('[ToonFX] Rim Light + Specular injected');
+}
+
+// ── Glass Fresnel shader for stage materials ──
+function injectGlassFX(mat) {
+  $._glassUniforms = $._glassUniforms || {};
+  mat.onBeforeCompile = function(shader) {
+    shader.uniforms.glassFresnelPower = { value: 3.0 };
+    shader.uniforms.glassEdgeColor = { value: new THREE.Color(0xffffff) };
+    shader.uniforms.glassEdgeIntensity = { value: 0.8 };
+    $._glassUniforms = shader.uniforms;
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <common>',
+      '#include <common>\n' +
+      'uniform float glassFresnelPower;\n' +
+      'uniform vec3 glassEdgeColor;\n' +
+      'uniform float glassEdgeIntensity;\n'
+    );
+    // For MeshStandardMaterial, the final output line may vary.
+    // Try multiple patterns to ensure injection succeeds.
+    var replaced = false;
+    // Pattern 1: standard output
+    if (shader.fragmentShader.indexOf('gl_FragColor = vec4( outgoingLight, diffuseColor.a );') >= 0) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        'gl_FragColor = vec4( outgoingLight, diffuseColor.a );',
+        '  float fresnelG = pow(1.0 - abs(dot(normalize(vViewPosition), normal)), glassFresnelPower);\n' +
+        '  outgoingLight += fresnelG * glassEdgeIntensity * glassEdgeColor;\n' +
+        '  gl_FragColor = vec4( outgoingLight, diffuseColor.a );'
+      );
+      replaced = true;
+    }
+    // Pattern 2: without alpha
+    if (!replaced && shader.fragmentShader.indexOf('gl_FragColor = vec4( outgoingLight, 1.0 );') >= 0) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        'gl_FragColor = vec4( outgoingLight, 1.0 );',
+        '  float fresnelG = pow(1.0 - abs(dot(normalize(vViewPosition), normal)), glassFresnelPower);\n' +
+        '  outgoingLight += fresnelG * glassEdgeIntensity * glassEdgeColor;\n' +
+        '  gl_FragColor = vec4( outgoingLight, 1.0 );'
+      );
+      replaced = true;
+    }
+    console.log('[GlassFX] Injection ' + (replaced ? 'successful' : 'FAILED - check shader output line'));
+  };
+  console.log('[GlassFX] Fresnel edge glow injected for lamp');
+}
+
+function togglePLPanel() {
+  document.getElementById('pl-panel-header').classList.toggle('collapsed');
+  document.getElementById('pl-body').classList.toggle('collapsed');
+}
+
+function refreshPLDropdown() {
+  var sel = document.getElementById('sel-pointlight');
+  var prev = sel.value;
+  sel.innerHTML = '<option value="">-- 无 --</option>';
+  $._pointLights.forEach(function(pl, i){
+    var opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = '光源 ' + (i+1) + ' (' + pl.posHint + ')';
+    sel.appendChild(opt);
+  });
+  sel.value = prev !== '' && parseInt(prev) < $._pointLights.length ? prev : ($._pointLights.length > 0 ? '0' : '');
+  if (sel.value !== '') onPLSelect();
+}
+
+function addPointLight() {
+  var light = new THREE.PointLight(0xfff8e6, 10, 200, 2.0);
+  light.position.set(0, 15, 0);
+  light.posHint = '0,15,0';
+  $.scene.add(light);
+  $._pointLights.push(light);
+  refreshPLDropdown();
+}
+
+function removePointLight() {
+  var sel = document.getElementById('sel-pointlight');
+  if (!sel.value) return;
+  var i = parseInt(sel.value);
+  var light = $._pointLights[i];
+  $.scene.remove(light);
+  $._pointLights.splice(i, 1);
+  refreshPLDropdown();
+}
+
+function getSelectedPL() {
+  var sel = document.getElementById('sel-pointlight');
+  if (!sel || !sel.value || !$._pointLights.length) return null;
+  var i = parseInt(sel.value);
+  return $._pointLights[i] || null;
+}
+
+function onPLSelect() {
+  var pl = getSelectedPL();
+  if (!pl) return;
+  document.getElementById('inp-pl-color').value = '#' + pl.color.getHexString();
+  document.getElementById('rng-pl-intensity').value = Math.round(pl.intensity * 10);
+  document.getElementById('num-pl-intensity').value = pl.intensity;
+  document.getElementById('rng-pl-distance').value = Math.round(pl.distance);
+  document.getElementById('num-pl-distance').value = Math.round(pl.distance);
+  document.getElementById('rng-pl-decay').value = Math.round(pl.decay * 10);
+  document.getElementById('num-pl-decay').value = pl.decay;
+  document.getElementById('inp-pl-x').value = Math.round(pl.position.x);
+  document.getElementById('inp-pl-y').value = Math.round(pl.position.y);
+  document.getElementById('inp-pl-z').value = Math.round(pl.position.z);
+}
+
+function onPLChange() {
+  var pl = getSelectedPL();
+  if (!pl) return;
+  var hex = document.getElementById('inp-pl-color').value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(hex)) pl.color.set(hex);
+  pl.intensity = parseInt(document.getElementById('rng-pl-intensity').value) / 10;
+  document.getElementById('num-pl-intensity').value = pl.intensity;
+  pl.distance = parseInt(document.getElementById('rng-pl-distance').value);
+  document.getElementById('num-pl-distance').value = pl.distance;
+  pl.decay = parseInt(document.getElementById('rng-pl-decay').value) / 10;
+  document.getElementById('num-pl-decay').value = pl.decay;
+  pl.position.set(
+    parseFloat(document.getElementById('inp-pl-x').value) || 0,
+    parseFloat(document.getElementById('inp-pl-y').value) || 0,
+    parseFloat(document.getElementById('inp-pl-z').value) || 0
+  );
+  pl.posHint = Math.round(pl.position.x)+','+Math.round(pl.position.y)+','+Math.round(pl.position.z);
+  refreshPLDropdown();
+  debouncedSave();
+}
+
+// Number input changed → sync slider + apply
+function onPLNumChange() {
+  var pl = getSelectedPL();
+  if (!pl) return;
+  var v = parseFloat(document.getElementById('num-pl-intensity').value) || 0;
+  pl.intensity = v;
+  document.getElementById('rng-pl-intensity').value = Math.round(v * 10);
+  v = parseFloat(document.getElementById('num-pl-distance').value) || 1;
+  pl.distance = v;
+  document.getElementById('rng-pl-distance').value = Math.round(v);
+  v = parseFloat(document.getElementById('num-pl-decay').value) || 0;
+  pl.decay = v;
+  document.getElementById('rng-pl-decay').value = Math.round(v * 10);
+}
+
+// ── 角色FX panel ──
+var $_unlitBackup = null;
+function toggleFXPanel() {
+  document.getElementById('fx-panel-header').classList.toggle('collapsed');
+  document.getElementById('fx-body').classList.toggle('collapsed');
+}
+// ============================================================
+// ★ 新灯光面板
+// ============================================================
+$.lightRefs = []; // {light, name}
+function buildLightPanel() {
+  var list = document.getElementById('light-list');
+  if (!list) return;
+  list.innerHTML = '';
+  $.lightRefs = [];
+  var idx = 0, html = '';
+  $.scene.traverse(function(c) {
+    if (!c.isLight || c.type === 'AmbientLight') return;
+    var name = '灯' + (idx+1) + ' ' + c.type.replace('Light','');
+    $.lightRefs.push({light: c, name: name});
+    html = '<div style="border-top:1px solid #21262d;padding:3px 0;">';
+    html += '<b>' + name + '</b> <input type="color" value="#' + c.color.getHexString() + '" onchange="onLightColor('+idx+',this.value)" style="width:24px;height:16px;vertical-align:middle;">';
+    if (c.isPointLight) {
+      html += ' 距:<input type="number" value="' + c.distance + '" onchange="onLightDist('+idx+',this.value)" style="width:46px;font-size:9px;background:var(--bg);color:var(--text);border:1px solid var(--border);">';
+      html += ' 衰:<input type="number" value="' + c.decay + '" onchange="onLightDecay('+idx+',this.value)" step="0.1" style="width:36px;font-size:9px;background:var(--bg);color:var(--text);border:1px solid var(--border);">';
+    }
+    html += ' 强:<input type="range" min="0" max="30" value="' + Math.round(c.intensity*10) + '" oninput="onLightInt('+idx+',this.value)" style="width:60px;vertical-align:middle;"> <span id="lint-'+idx+'">' + c.intensity.toFixed(1) + '</span>';
+    html += '<br>XYZ:';
+    html += '<input type="number" value="' + c.position.x.toFixed(0) + '" onchange="onLightPos('+idx+',0,this.value)" style="width:42px;font-size:9px;background:var(--bg);color:var(--text);border:1px solid var(--border);">';
+    html += '<input type="number" value="' + c.position.y.toFixed(0) + '" onchange="onLightPos('+idx+',1,this.value)" style="width:42px;font-size:9px;background:var(--bg);color:var(--text);border:1px solid var(--border);">';
+    html += '<input type="number" value="' + c.position.z.toFixed(0) + '" onchange="onLightPos('+idx+',2,this.value)" style="width:42px;font-size:9px;background:var(--bg);color:var(--text);border:1px solid var(--border);">';
+    html += '</div>';
+    list.innerHTML += html;
+    idx++;
+  });
+  document.getElementById('light-count').textContent = idx + 1; // +1 for ambient
+  if ($.ambient) {
+    html = '<div style="border-top:1px solid #21262d;padding:3px 0;">';
+    html += '<b>环境光</b> <input type="color" value="#' + $.ambient.color.getHexString() + '" onchange="onAmbColor(this.value)" style="width:24px;height:16px;vertical-align:middle;">';
+    html += ' 强:<input type="range" min="0" max="100" value="' + Math.round($.ambient.intensity*100) + '" oninput="onAmbInt(this.value)" style="width:60px;vertical-align:middle;"> <span id="amb-int">' + $.ambient.intensity.toFixed(2) + '</span>';
+    html += '</div>';
+    list.innerHTML += html;
+  }
+}
+function onLightColor(idx, hex) {
+  $.lightRefs[idx].light.color.set(hex);
+}
+function onLightInt(idx, val) {
+  var v = parseInt(val) / 10;
+  $.lightRefs[idx].light.intensity = v;
+  document.getElementById('lint-'+idx).textContent = v.toFixed(1);
+}
+function onLightPos(idx, axis, val) {
+  var p = $.lightRefs[idx].light.position;
+  if (axis===0) p.x = parseFloat(val);
+  else if (axis===1) p.y = parseFloat(val);
+  else p.z = parseFloat(val);
+}
+function onAmbColor(hex) { $.ambient.color.set(hex); }
+function onAmbInt(val) {
+  var v = parseInt(val) / 100;
+  $.ambient.intensity = v;
+  document.getElementById('amb-int').textContent = v.toFixed(2);
+}
+// ===== 🔆 光照调试面板 JS =====
+function debugAmbient(val) {
+  var v = parseInt(val) / 100;
+  if ($.ambient) { $.ambient.intensity = v; }
+  var el = document.getElementById('debug-amb-val');
+  if (el) el.textContent = v.toFixed(2);
+}
+function debugDirLight(val) {
+  var v = parseInt(val) / 100;
+  $.scene.traverse(function(c) {
+    if (c.isDirectionalLight) c.intensity = v;
+  });
+  var el = document.getElementById('debug-dir-val');
+  if (el) el.textContent = v.toFixed(2);
+}
+function debugResetLighting() {
+  document.getElementById('debug-amb').value = 50;
+  document.getElementById('debug-amb-val').textContent = '0.50';
+  if ($.ambient) $.ambient.intensity = 0.5;
+  document.getElementById('debug-dir').value = 35;
+  document.getElementById('debug-dir-val').textContent = '0.35';
+  $.scene.traverse(function(c) {
+    if (c.isDirectionalLight) c.intensity = 0.35;
+  });
+  console.log('🔄 光照已重置');
+}
+function onNewExp() {
+  var v = parseInt(document.getElementById('rng-exp2').value) / 10;
+  $.renderer.toneMappingExposure = v;
+  document.getElementById('val-exp2').textContent = v.toFixed(1);
+}
+function onLightDist(idx, val) {
+  $.lightRefs[idx].light.distance = parseFloat(val);
+}
+function onLightDecay(idx, val) {
+  $.lightRefs[idx].light.decay = parseFloat(val);
+}
+// 初始化
+// 初始化 - 灯光面板已移除
+// ============================================================
+function showNormalCoverage() {
+  var targetIdx = parseInt(document.getElementById('pbr-mat-idx').value) - 1;
+  if (!$.stageModel) return;
+  $.stageModel.traverse(function(child) {
+    if (!child.isMesh) return;
+    var mats = Array.isArray(child.material) ? child.material : [child.material];
+    var m = mats[targetIdx];
+    if (!m || m.type !== 'MeshStandardMaterial' || !m._normMap) return;
+    m._savedMap = m.map;
+    // 用 Canvas 做 gamma→linear 反转再显示，让颜色正确
+    var cv = document.createElement('canvas');
+    var img = m._normMap.image;
+    cv.width = img.width; cv.height = img.height;
+    var ctx = cv.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    var data = ctx.getImageData(0, 0, cv.width, cv.height);
+    for (var i = 0; i < data.data.length; i += 4) {
+      // Linear→sRGB gamma 矫正（approx）让 normal 贴图作为颜色显示时看起来对
+      data.data[i] = Math.round(Math.pow(data.data[i]/255, 1/2.2) * 255);
+      data.data[i+1] = Math.round(Math.pow(data.data[i+1]/255, 1/2.2) * 255);
+      data.data[i+2] = Math.round(Math.pow(data.data[i+2]/255, 1/2.2) * 255);
+    }
+    ctx.putImageData(data, 0, 0);
+    var showTex = new THREE.CanvasTexture(cv);
+    showTex.encoding = THREE.sRGBEncoding;
+    // 复制 UV 变换
+    if (m._savedMap) {
+      showTex.offset.copy(m._savedMap.offset);
+      showTex.repeat.copy(m._savedMap.repeat);
+    }
+    m.map = showTex;
+    m.color.set(0xffffff);
+    m.roughness = 0.5;
+    m.metalness = 0;
+    m.normalMap = null;
+    m.needsUpdate = true;
+  });
+}
+function hideNormalCoverage() {
+  var targetIdx = parseInt(document.getElementById('pbr-mat-idx').value) - 1;
+  if (!$.stageModel) return;
+  $.stageModel.traverse(function(child) {
+    if (!child.isMesh) return;
+    var mats = Array.isArray(child.material) ? child.material : [child.material];
+    var m = mats[targetIdx];
+    if (!m || m.type !== 'MeshStandardMaterial' || !m._savedMap) return;
+    m.map = m._savedMap;
+    m._savedMap = null;
+    m.normalMap = document.getElementById('pbr-normal').checked && m._normMap ? m._normMap : null;
+    m.needsUpdate = true;
+    onPBRToggle(); // 恢复其他设置
+  });
+}
+function onPBRNormalStr() {
+  var v = parseInt(document.getElementById('pbr-normal-str').value) / 20;
+  document.getElementById('val-normal-str').textContent = v.toFixed(2);
+  var targetIdx = parseInt(document.getElementById('pbr-mat-idx').value) - 1;
+  if (!$.stageModel) return;
+  $.stageModel.traverse(function(child) {
+    if (!child.isMesh) return;
+    var mats = Array.isArray(child.material) ? child.material : [child.material];
+    var m = mats[targetIdx];
+    if (m && m.type === 'MeshStandardMaterial' && m.normalMap) {
+      m.normalScale.set(v, v);
+    }
+  });
+}
+
+function onPBRToggle() {
+  var targetIdx = parseInt(document.getElementById('pbr-mat-idx').value) - 1;
+  var useRough = document.getElementById('pbr-roughness').checked;
+  var useMetal  = document.getElementById('pbr-metalness').checked;
+  var useNormal = document.getElementById('pbr-normal').checked;
+  var useEmissive = document.getElementById('pbr-emissive').checked;
+  
+  if (!$.stageModel) return;
+  $.stageModel.traverse(function(child) {
+    if (!child.isMesh) return;
+    var mats = Array.isArray(child.material) ? child.material : [child.material];
+    var m = mats[targetIdx];
+    if (!m || m.type !== 'MeshStandardMaterial') return;
+    m.roughnessMap = useRough && m._roughMap ? m._roughMap : null;
+    m.roughness = useRough && m._roughMap ? 1.0 : 0.5;
+    m.metalnessMap = useMetal && m._metalMap ? m._metalMap : null;
+    m.metalness = useMetal && m._metalMap ? 0.5 : 0.0;
+    m.normalMap = useNormal && m._normMap ? m._normMap : null;
+    if (targetIdx === 5) {
+      m.emissiveIntensity = useEmissive ? 0.3 : 0;
+    }
+    m.needsUpdate = true;
+  });
+}
+
+function onFXChange() {
+  var u = $._rimSpecUniforms;
+  if (!u) return;
+  var hex = document.getElementById('inp-rim-color').value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(hex)) u.rimColor.value.set(hex);
+  u.rimPower.value = parseInt(document.getElementById('rng-rim-power').value) / 10;
+  document.getElementById('val-rim-power').textContent = u.rimPower.value.toFixed(1);
+  u.rimIntensity.value = parseInt(document.getElementById('rng-rim-intensity').value) / 10;
+  document.getElementById('val-rim-intensity').textContent = u.rimIntensity.value.toFixed(1);
+  hex = document.getElementById('inp-spec-color').value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(hex)) u.specColor.value.set(hex);
+  u.specIntensity.value = parseInt(document.getElementById('rng-spec-intensity').value) / 10;
+  document.getElementById('val-spec-intensity').textContent = u.specIntensity.value.toFixed(1);
+  u.specShininess.value = parseInt(document.getElementById('rng-spec-shininess').value);
+  document.getElementById('val-spec-shininess').textContent = u.specShininess.value;
+  u.unlitMode.value = document.getElementById('chk-unlit').checked ? 1 : 0;
+  // Force unlit: set directional lights to 0, boost ambient to show texture
+  if (u.unlitMode.value > 0.5) {
+    $_unlitBackup = $_unlitBackup || {};
+    $_unlitBackup.keyIntensity = $.keyLight.intensity;
+    $_unlitBackup.fillIntensity = $.fillLight.intensity;
+    $_unlitBackup.rimIntensity = $.rimLight.intensity;
+    $_unlitBackup.ambientIntensity = $.ambient.intensity;
+    $.keyLight.intensity = 0;
+    $.fillLight.intensity = 0;
+    $.rimLight.intensity = 0;
+    $.ambient.intensity = 2.5;
+    $.ambient.color.set('#ffffff');
+  } else if ($_unlitBackup) {
+    $.keyLight.intensity = $_unlitBackup.keyIntensity;
+    $.fillLight.intensity = $_unlitBackup.fillIntensity;
+    $.rimLight.intensity = $_unlitBackup.rimIntensity;
+    $.ambient.intensity = $_unlitBackup.ambientIntensity;
+    $.ambient.color.copy($.neutralAmbientColor);
+  }
+  debouncedSave();
+}
+
+function onLightChange() {
+  if (!$.keyLight) return;
+  var v;
+  v = parseInt(document.getElementById('rng-key').value) / 10;
+  document.getElementById('val-key').textContent = v.toFixed(1);
+  $.keyLight.intensity = document.getElementById('chk-key').checked ? v : 0;
+  v = parseInt(document.getElementById('rng-fill').value) / 20;
+  document.getElementById('val-fill').textContent = v.toFixed(2);
+  $.fillLight.intensity = document.getElementById('chk-fill').checked ? v : 0;
+  v = parseInt(document.getElementById('rng-rim').value) / 10;
+  document.getElementById('val-rim').textContent = v.toFixed(1);
+  $.rimLight.intensity = document.getElementById('chk-rim').checked ? v : 0;
+  v = parseInt(document.getElementById('rng-amb').value) / 100;
+  document.getElementById('val-amb').textContent = v.toFixed(2);
+  $.ambient.intensity = v;
+  v = parseInt(document.getElementById('rng-exp').value) / 10;
+  document.getElementById('val-exp').textContent = v.toFixed(1);
+  $.renderer.toneMappingExposure = $._exposureLocked || v;
+  // Color temperature → shifts all lights
+  var k = parseInt(document.getElementById('rng-temp').value) * 100;
+  document.getElementById('val-temp').textContent = k + 'K';
+  var temp = kelvinToColor(k);
+  $.keyLight.color.copy($.neutralKeyColor).multiply(temp);
+  $.fillLight.color.copy($.neutralFillColor).multiply(temp);
+  $.rimLight.color.copy($.neutralRimColor).multiply(temp);
+  $.ambient.color.copy($.neutralAmbientColor).multiply(temp);
+  debouncedSave();
+}
+
+// Hex color changed → update neutral + re-apply temp
+function onLightHexChange() {
+  applyHex('hex-key', 'neutralKeyColor', 'keyLight');
+  applyHex('hex-fill', 'neutralFillColor', 'fillLight');
+  applyHex('hex-amb', 'neutralAmbientColor', 'ambient');
+  applyHex('hex-rim', 'neutralRimColor', 'rimLight');
+  onLightChange();
+}
+function applyHex(hexId, neutralId, lightId) {
+  var hex = document.getElementById(hexId).value.trim();
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+  $[neutralId].set(hex);
+  $[lightId].color.copy($[neutralId]);
+}
+// Directional light position changed
+function onLightPosChange(name) {
+  var pos = $[name].position;
+  pos.set(
+    parseFloat(document.getElementById('inp-'+ (name==='keyLight'?'key':name==='fillLight'?'fill':'rim') +'-x').value) || pos.x,
+    parseFloat(document.getElementById('inp-'+ (name==='keyLight'?'key':name==='fillLight'?'fill':'rim') +'-y').value) || pos.y,
+    parseFloat(document.getElementById('inp-'+ (name==='keyLight'?'key':name==='fillLight'?'fill':'rim') +'-z').value) || pos.z
+  );
+}
+
+// ── Config save/load (file via server + localStorage backup) ──
+var CONFIG_KEY = 'mmd_light_config';
+
+function saveConfig() {
+  var cfg = getConfigData();
+  if (cfg) localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+}
+
+// Toast notification
+function toast(msg, ok) {
+  var t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:6px 16px;border-radius:6px;font-size:13px;z-index:9999;pointer-events:none;transition:opacity 0.4s;opacity:0;' +
+    (ok ? 'background:#1a3a1a;color:#3fb950;border:1px solid #3fb950;' : 'background:#3a1a1a;color:#f85149;border:1px solid #f85149;');
+  document.body.appendChild(t);
+  requestAnimationFrame(function(){ t.style.opacity = '1'; });
+  setTimeout(function(){ t.style.opacity = '0'; setTimeout(function(){ t.remove(); }, 400); }, 2000);
+}
+
+function getConfigData() {
+  // Reuse saveConfig logic but return the object
+  if (!$.keyLight) return null;
+  var cfg = {
+    lights: {
+      key:   { enabled: document.getElementById('chk-key').checked,   color: document.getElementById('hex-key').value,   intensity: parseFloat(document.getElementById('val-key').textContent),   x: parseFloat(document.getElementById('inp-key-x').value)||0, y: parseFloat(document.getElementById('inp-key-y').value)||0, z: parseFloat(document.getElementById('inp-key-z').value)||0 },
+      fill:  { enabled: document.getElementById('chk-fill').checked,  color: document.getElementById('hex-fill').value,  intensity: parseFloat(document.getElementById('val-fill').textContent),  x: parseFloat(document.getElementById('inp-fill-x').value)||0, y: parseFloat(document.getElementById('inp-fill-y').value)||0, z: parseFloat(document.getElementById('inp-fill-z').value)||0 },
+      rim:   { enabled: document.getElementById('chk-rim').checked,   color: document.getElementById('hex-rim').value,   intensity: parseFloat(document.getElementById('val-rim').textContent),   x: parseFloat(document.getElementById('inp-rim-x').value)||0, y: parseFloat(document.getElementById('inp-rim-y').value)||0, z: parseFloat(document.getElementById('inp-rim-z').value)||0 },
+      ambient: { color: document.getElementById('hex-amb').value, intensity: parseFloat(document.getElementById('val-amb').textContent) },
+      exposure: parseFloat(document.getElementById('val-exp').textContent),
+      colorTemp: parseInt(document.getElementById('rng-temp').value)
+    },
+    pointLights: [],
+    rimSpec: {},
+    materials: {}
+  };
+  if ($._pointLights) {
+    $._pointLights.forEach(function(pl){
+      cfg.pointLights.push({
+        color: '#'+pl.color.getHexString(), intensity: pl.intensity, distance: pl.distance, decay: pl.decay,
+        x: pl.position.x, y: pl.position.y, z: pl.position.z
+      });
+    });
+  }
+  var u = $._rimSpecUniforms;
+  if (u) {
+    cfg.rimSpec = {
+      rimColor: '#'+u.rimColor.value.getHexString(), rimPower: u.rimPower.value, rimIntensity: u.rimIntensity.value,
+      specColor: '#'+u.specColor.value.getHexString(), specIntensity: u.specIntensity.value, specShininess: u.specShininess.value,
+      unlit: document.getElementById('chk-unlit').checked
+    };
+  }
+  if ($._stageMaterials) {
+    $._stageMaterials.forEach(function(e){
+      var m = e.mat;
+      if (m.emissiveIntensity > 0.01 || m.roughness !== 0.55 || m.metalness !== 0.05 || m.opacity !== 1 || m.transparent || !m.depthWrite) {
+        cfg.materials[e.index] = {
+          roughness: m.roughness, metalness: m.metalness, opacity: m.opacity,
+          emissive: '#'+m.emissive.getHexString(), emissiveIntensity: m.emissiveIntensity,
+          transparent: !!m.transparent, depthWrite: !!m.depthWrite,
+          envMapIntensity: m.envMapIntensity || 0
+        };
+      }
+    });
+  }
+  return cfg;
+}
+
+async function saveConfigFile() {
+  var cfg = getConfigData();
+  if (!cfg) return;
+  var name = document.getElementById('inp-config-name').value.trim() || 'default';
+  try {
+    var resp = await fetch('/api/light-config/save', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name: name, data: cfg})
+    });
+    var r = await resp.json();
+    if (r.ok) toast('✅ 已保存: ' + r.name, true);
+    else toast('❌ 保存失败', false);
+  } catch(e) { toast('❌ 保存失败: ' + e.message, false); }
+}
+
+async function loadConfigFile() {
+  var name = document.getElementById('inp-config-name').value.trim() || 'default';
+  try {
+    var resp = await fetch('/api/light-config/load?name=' + encodeURIComponent(name));
+    var r = await resp.json();
+    if (!r.ok) { toast('❌ ' + r.error, false); return; }
+    var cfg = JSON.parse(r.data);
+    applyConfigData(cfg);
+    toast('✅ 已加载: ' + name, true);
+  } catch(e) { toast('❌ 加载失败: ' + e.message, false); }
+}
+
+async function deleteConfigFile() {
+  var name = document.getElementById('inp-config-name').value.trim();
+  if (!name || !confirm('删除配置 "' + name + '"？')) return;
+  try {
+    await fetch('/api/light-config/delete', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({name: name})
+    });
+    toast('🗑 已删除: ' + name, true);
+  } catch(e) { toast('❌ 删除失败', false); }
+}
+
+async function listConfigFiles() {
+  try {
+    var resp = await fetch('/api/light-config/list');
+    var files = await resp.json();
+    if (!files.length) { toast('📋 暂无保存的配置', true); return; }
+    var list = files.join('\n');
+    var sel = prompt('已有配置（输入名称加载，取消关闭）:\n\n' + list);
+    if (sel && sel.trim()) {
+      document.getElementById('inp-config-name').value = sel.trim();
+      loadConfigFile();
+    }
+  } catch(e) { toast('❌ 获取列表失败', false); }
+}
+
+// Apply config data (shared by loadConfigFile and localStorage load)
+function applyConfigData(cfg) {
+  if (!cfg.lights) return;
+  function applyLight(prefix, l, obj) {
+    if (l.enabled !== undefined) document.getElementById('chk-'+prefix).checked = l.enabled;
+    if (l.color) document.getElementById('hex-'+prefix).value = l.color;
+    if (l.intensity !== undefined) {
+      var rngId = 'rng-'+prefix;
+      if (prefix==='fill') document.getElementById(rngId).value = Math.round(l.intensity * 20);
+      else if (prefix==='key') document.getElementById(rngId).value = Math.round(l.intensity * 10);
+      else if (prefix==='rim') document.getElementById(rngId).value = Math.round(l.intensity * 10);
+      document.getElementById('val-'+prefix).textContent = l.intensity.toFixed(prefix==='fill'?2:1);
+    }
+    if (l.x !== undefined) {
+      document.getElementById('inp-'+prefix+'-x').value = l.x;
+      document.getElementById('inp-'+prefix+'-y').value = l.y;
+      document.getElementById('inp-'+prefix+'-z').value = l.z;
+    }
+  }
+  applyLight('key', cfg.lights.key, $.keyLight);
+  applyLight('fill', cfg.lights.fill, $.fillLight);
+  applyLight('rim', cfg.lights.rim, $.rimLight);
+  if (cfg.lights.ambient) {
+    document.getElementById('hex-amb').value = cfg.lights.ambient.color;
+    document.getElementById('rng-amb').value = Math.round(cfg.lights.ambient.intensity * 100);
+    document.getElementById('val-amb').textContent = cfg.lights.ambient.intensity.toFixed(2);
+  }
+  if (cfg.lights.exposure !== undefined) {
+    document.getElementById('rng-exp').value = Math.round(cfg.lights.exposure * 10);
+    document.getElementById('val-exp').textContent = cfg.lights.exposure.toFixed(1);
+  }
+  if (cfg.lights.colorTemp !== undefined) {
+    document.getElementById('rng-temp').value = cfg.lights.colorTemp;
+    document.getElementById('val-temp').textContent = (cfg.lights.colorTemp * 100) + 'K';
+  }
+  onLightChange();
+  // PointLights
+  $._pointLights.forEach(function(pl){ $.scene.remove(pl); });
+  $._pointLights = [];
+  if (cfg.pointLights) {
+    cfg.pointLights.forEach(function(p){
+      var light = new THREE.PointLight(p.color, p.intensity, p.distance, p.decay);
+      light.position.set(p.x, p.y, p.z);
+      light.posHint = Math.round(p.x)+','+Math.round(p.y)+','+Math.round(p.z);
+      $.scene.add(light);
+      $._pointLights.push(light);
+    });
+  }
+  refreshPLDropdown();
+  // Rim/Spec
+  if (cfg.rimSpec && $._rimSpecUniforms) {
+    var u = $._rimSpecUniforms;
+    if (cfg.rimSpec.rimColor) u.rimColor.value.set(cfg.rimSpec.rimColor);
+    u.rimPower.value = cfg.rimSpec.rimPower || 4.5;
+    u.rimIntensity.value = cfg.rimSpec.rimIntensity || 0.3;
+    if (cfg.rimSpec.specColor) u.specColor.value.set(cfg.rimSpec.specColor);
+    u.specIntensity.value = cfg.rimSpec.specIntensity || 0.1;
+    u.specShininess.value = cfg.rimSpec.specShininess || 32;
+    document.getElementById('inp-rim-color').value = cfg.rimSpec.rimColor;
+    document.getElementById('rng-rim-power').value = Math.round(u.rimPower.value * 10);
+    document.getElementById('val-rim-power').textContent = u.rimPower.value.toFixed(1);
+    document.getElementById('rng-rim-intensity').value = Math.round(u.rimIntensity.value * 10);
+    document.getElementById('val-rim-intensity').textContent = u.rimIntensity.value.toFixed(1);
+    document.getElementById('inp-spec-color').value = cfg.rimSpec.specColor;
+    document.getElementById('rng-spec-intensity').value = Math.round(u.specIntensity.value * 10);
+    document.getElementById('val-spec-intensity').textContent = u.specIntensity.value.toFixed(1);
+    document.getElementById('rng-spec-shininess').value = u.specShininess.value;
+    document.getElementById('val-spec-shininess').textContent = u.specShininess.value;
+    if (cfg.rimSpec.unlit !== undefined) {
+      document.getElementById('chk-unlit').checked = cfg.rimSpec.unlit;
+      u.unlitMode.value = cfg.rimSpec.unlit ? 1 : 0;
+    }
+  }
+  // Materials
+  if (cfg.materials) {
+    Object.keys(cfg.materials).forEach(function(idx){
+      var entry = $._stageMaterials && $._stageMaterials.find(function(e){return e.index===parseInt(idx);});
+      if (!entry) return;
+      var m = entry.mat, d = cfg.materials[idx];
+      if (d.roughness !== undefined) m.roughness = d.roughness;
+      if (d.metalness !== undefined) m.metalness = d.metalness;
+      if (d.opacity !== undefined) m.opacity = d.opacity;
+      if (d.emissive) m.emissive.set(d.emissive);
+      if (d.emissiveIntensity !== undefined) m.emissiveIntensity = d.emissiveIntensity;
+      if (d.transparent !== undefined) m.transparent = d.transparent;
+      if (d.depthWrite !== undefined) m.depthWrite = d.depthWrite;
+      if (d.envMapIntensity !== undefined) m.envMapIntensity = d.envMapIntensity;
+      m.needsUpdate = true;
+    });
+  }
+  onMatSelect();
+}
+function saveConfig() {
+  if (!$.keyLight) return;
+  var cfg = {
+    lights: {
+      key:   { enabled: document.getElementById('chk-key').checked,   color: document.getElementById('hex-key').value,   intensity: parseFloat(document.getElementById('val-key').textContent),   x: parseFloat(document.getElementById('inp-key-x').value)||0, y: parseFloat(document.getElementById('inp-key-y').value)||0, z: parseFloat(document.getElementById('inp-key-z').value)||0 },
+      fill:  { enabled: document.getElementById('chk-fill').checked,  color: document.getElementById('hex-fill').value,  intensity: parseFloat(document.getElementById('val-fill').textContent),  x: parseFloat(document.getElementById('inp-fill-x').value)||0, y: parseFloat(document.getElementById('inp-fill-y').value)||0, z: parseFloat(document.getElementById('inp-fill-z').value)||0 },
+      rim:   { enabled: document.getElementById('chk-rim').checked,   color: document.getElementById('hex-rim').value,   intensity: parseFloat(document.getElementById('val-rim').textContent),   x: parseFloat(document.getElementById('inp-rim-x').value)||0, y: parseFloat(document.getElementById('inp-rim-y').value)||0, z: parseFloat(document.getElementById('inp-rim-z').value)||0 },
+      ambient: { color: document.getElementById('hex-amb').value, intensity: parseFloat(document.getElementById('val-amb').textContent) },
+      exposure: parseFloat(document.getElementById('val-exp').textContent),
+      colorTemp: parseInt(document.getElementById('rng-temp').value)
+    },
+    pointLights: [],
+    rimSpec: {},
+    materials: {}
+  };
+  // PointLights
+  if ($._pointLights) {
+    $._pointLights.forEach(function(pl){
+      cfg.pointLights.push({
+        color: '#'+pl.color.getHexString(), intensity: pl.intensity, distance: pl.distance, decay: pl.decay,
+        x: pl.position.x, y: pl.position.y, z: pl.position.z
+      });
+    });
+  }
+  // Rim/Spec
+  var u = $._rimSpecUniforms;
+  if (u) {
+    cfg.rimSpec = {
+      rimColor: '#'+u.rimColor.value.getHexString(), rimPower: u.rimPower.value, rimIntensity: u.rimIntensity.value,
+      specColor: '#'+u.specColor.value.getHexString(), specIntensity: u.specIntensity.value, specShininess: u.specShininess.value,
+      unlit: document.getElementById('chk-unlit').checked
+    };
+  }
+  // Materials (only those with non-default settings)
+  if ($._stageMaterials) {
+    $._stageMaterials.forEach(function(e){
+      var m = e.mat;
+      if (m.emissiveIntensity > 0.01 || m.roughness !== 0.55 || m.metalness !== 0.05 || m.opacity !== 1 || m.transparent || !m.depthWrite) {
+        cfg.materials[e.index] = {
+          roughness: m.roughness, metalness: m.metalness, opacity: m.opacity,
+          emissive: '#'+m.emissive.getHexString(), emissiveIntensity: m.emissiveIntensity,
+          transparent: !!m.transparent, depthWrite: !!m.depthWrite,
+          envMapIntensity: m.envMapIntensity || 0
+        };
+      }
+    });
+  }
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+  console.log('💾 配置已保存 (' + cfg.pointLights.length + ' 点光源, ' + Object.keys(cfg.materials).length + ' 材质)');
+}
+
+function loadConfig() {
+  var raw = localStorage.getItem(CONFIG_KEY);
+  if (!raw) { console.log('📂 无保存配置'); return; }
+  var cfg = JSON.parse(raw);
+  if (!cfg.lights) return;
+  // Lights
+  function applyLight(prefix, l, obj) {
+    if (l.enabled !== undefined) document.getElementById('chk-'+prefix).checked = l.enabled;
+    if (l.color) document.getElementById('hex-'+prefix).value = l.color;
+    if (l.intensity !== undefined) {
+      var rngId = 'rng-'+prefix, valId = 'val-'+prefix;
+      if (prefix==='fill') document.getElementById(rngId).value = Math.round(l.intensity * 20);
+      else if (prefix==='key') document.getElementById(rngId).value = Math.round(l.intensity * 10);
+      else if (prefix==='rim') document.getElementById(rngId).value = Math.round(l.intensity * 10);
+      document.getElementById(valId).textContent = l.intensity.toFixed(prefix==='fill'?2:1);
+    }
+    if (l.x !== undefined) {
+      document.getElementById('inp-'+prefix+'-x').value = l.x;
+      document.getElementById('inp-'+prefix+'-y').value = l.y;
+      document.getElementById('inp-'+prefix+'-z').value = l.z;
+    }
+  }
+  applyLight('key', cfg.lights.key, $.keyLight);
+  applyLight('fill', cfg.lights.fill, $.fillLight);
+  applyLight('rim', cfg.lights.rim, $.rimLight);
+  if (cfg.lights.ambient) {
+    document.getElementById('hex-amb').value = cfg.lights.ambient.color;
+    document.getElementById('rng-amb').value = Math.round(cfg.lights.ambient.intensity * 100);
+    document.getElementById('val-amb').textContent = cfg.lights.ambient.intensity.toFixed(2);
+  }
+  if (cfg.lights.exposure !== undefined) {
+    document.getElementById('rng-exp').value = Math.round(cfg.lights.exposure * 10);
+    document.getElementById('val-exp').textContent = cfg.lights.exposure.toFixed(1);
+  }
+  if (cfg.lights.colorTemp !== undefined) {
+    document.getElementById('rng-temp').value = cfg.lights.colorTemp;
+    document.getElementById('val-temp').textContent = (cfg.lights.colorTemp * 100) + 'K';
+  }
+  onLightChange();
+  // PointLights — clear existing, recreate
+  $._pointLights.forEach(function(pl){ $.scene.remove(pl); });
+  $._pointLights = [];
+  if (cfg.pointLights) {
+    cfg.pointLights.forEach(function(p){
+      var light = new THREE.PointLight(p.color, p.intensity, p.distance, p.decay);
+      light.position.set(p.x, p.y, p.z);
+      light.posHint = Math.round(p.x)+','+Math.round(p.y)+','+Math.round(p.z);
+      $.scene.add(light);
+      $._pointLights.push(light);
+    });
+  }
+  refreshPLDropdown();
+  // Rim/Spec
+  if (cfg.rimSpec && $._rimSpecUniforms) {
+    var u = $._rimSpecUniforms;
+    if (cfg.rimSpec.rimColor) u.rimColor.value.set(cfg.rimSpec.rimColor);
+    u.rimPower.value = cfg.rimSpec.rimPower || 4.5;
+    u.rimIntensity.value = cfg.rimSpec.rimIntensity || 0.8;
+    if (cfg.rimSpec.specColor) u.specColor.value.set(cfg.rimSpec.specColor);
+    u.specIntensity.value = cfg.rimSpec.specIntensity || 0.3;
+    u.specShininess.value = cfg.rimSpec.specShininess || 32;
+    document.getElementById('inp-rim-color').value = cfg.rimSpec.rimColor;
+    document.getElementById('rng-rim-power').value = Math.round(u.rimPower.value * 10);
+    document.getElementById('val-rim-power').textContent = u.rimPower.value.toFixed(1);
+    document.getElementById('rng-rim-intensity').value = Math.round(u.rimIntensity.value * 10);
+    document.getElementById('val-rim-intensity').textContent = u.rimIntensity.value.toFixed(1);
+    document.getElementById('inp-spec-color').value = cfg.rimSpec.specColor;
+    document.getElementById('rng-spec-intensity').value = Math.round(u.specIntensity.value * 10);
+    document.getElementById('val-spec-intensity').textContent = u.specIntensity.value.toFixed(1);
+    document.getElementById('rng-spec-shininess').value = u.specShininess.value;
+    document.getElementById('val-spec-shininess').textContent = u.specShininess.value;
+    // Unlit mode
+    if (cfg.rimSpec.unlit !== undefined) {
+      document.getElementById('chk-unlit').checked = cfg.rimSpec.unlit;
+      u.unlitMode.value = cfg.rimSpec.unlit ? 1 : 0;
+    }
+  }
+  // Materials
+  if (cfg.materials) {
+    Object.keys(cfg.materials).forEach(function(idx){
+      var entry = $._stageMaterials && $._stageMaterials.find(function(e){return e.index===parseInt(idx);});
+      if (!entry) return;
+      var m = entry.mat, d = cfg.materials[idx];
+      if (d.roughness !== undefined) m.roughness = d.roughness;
+      if (d.metalness !== undefined) m.metalness = d.metalness;
+      if (d.opacity !== undefined) m.opacity = d.opacity;
+      if (d.emissive) m.emissive.set(d.emissive);
+      if (d.emissiveIntensity !== undefined) m.emissiveIntensity = d.emissiveIntensity;
+      if (d.transparent !== undefined) m.transparent = d.transparent;
+      if (d.depthWrite !== undefined) m.depthWrite = d.depthWrite;
+      if (d.envMapIntensity !== undefined) m.envMapIntensity = d.envMapIntensity;
+      m.needsUpdate = true;
+    });
+  }
+  onMatSelect();
+  console.log('📂 配置已加载');
+}
+
+// Auto-load on init, after everything is ready
+function loadConfig() { /* disabled */ }
+function saveConfig() { /* disabled */ }
+function autoLoadConfig() { /* disabled */ }
+</script>
+</body>
+</html>

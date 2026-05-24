@@ -1,0 +1,229 @@
+{
+  "material": "材質20",
+  "nodes": [
+    {
+      "name": "材质输出",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        525.4607543945312,
+        1500.0
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "透明 BSDF",
+      "type": "BSDF_TRANSPARENT",
+      "location": [
+        -344.2380065917969,
+        1181.4814453125
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Weight": 0.0
+    },
+    {
+      "name": "mmd_base_tex",
+      "type": "TEX_IMAGE",
+      "location": [
+        -1133.94189453125,
+        1325.711669921875
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0016_2.png"
+    },
+    {
+      "name": "混合着色器",
+      "type": "MIX_SHADER",
+      "location": [
+        297.39031982421875,
+        1371.4146728515625
+      ],
+      "Factor": 0.5
+    },
+    {
+      "name": "漫射 BSDF",
+      "type": "BSDF_DIFFUSE",
+      "location": [
+        -726.5562744140625,
+        1619.626953125
+      ],
+      "Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ],
+      "Roughness": 0.0,
+      "Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Weight": 0.0
+    },
+    {
+      "name": "Shader --> RGB",
+      "type": "SHADERTORGB",
+      "location": [
+        -523.5625610351562,
+        1623.388916015625
+      ]
+    },
+    {
+      "name": "色相/饱和度/明度",
+      "type": "HUE_SAT",
+      "location": [
+        -258.15740966796875,
+        1737.0408935546875
+      ],
+      "Hue": 0.550000011920929,
+      "Saturation": 1.350000023841858,
+      "Value": 1.5,
+      "Factor": 1.0,
+      "Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ]
+    },
+    {
+      "name": "自发光(发射)",
+      "type": "EMISSION",
+      "location": [
+        70.01972961425781,
+        1612.2115478515625
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Strength": 0.8999999761581421,
+      "Weight": 0.0
+    },
+    {
+      "name": "颜色渐变",
+      "type": "VALTORGB",
+      "location": [
+        -783.1119995117188,
+        1342.1409912109375
+      ],
+      "Factor": 0.5
+    },
+    {
+      "name": "材质输出.001",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        0.0,
+        0.0
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "混合着色器.001",
+      "type": "MIX_SHADER",
+      "location": [
+        0.0,
+        0.0
+      ],
+      "Factor": 0.5
+    },
+    {
+      "name": "光程",
+      "type": "LIGHT_PATH",
+      "location": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "透明 BSDF.001",
+      "type": "BSDF_TRANSPARENT",
+      "location": [
+        0.0,
+        0.0
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Weight": 0.0
+    }
+  ],
+  "links": [
+    {
+      "from": "透明 BSDF.BSDF",
+      "to": "混合着色器.Shader"
+    },
+    {
+      "from": "mmd_base_tex.Alpha",
+      "to": "颜色渐变.Factor"
+    },
+    {
+      "from": "mmd_base_tex.Color",
+      "to": "漫射 BSDF.Color"
+    },
+    {
+      "from": "漫射 BSDF.BSDF",
+      "to": "Shader --> RGB.Shader"
+    },
+    {
+      "from": "混合着色器.Shader",
+      "to": "材质输出.Surface"
+    },
+    {
+      "from": "Shader --> RGB.Color",
+      "to": "色相/饱和度/明度.Color"
+    },
+    {
+      "from": "颜色渐变.Color",
+      "to": "混合着色器.Factor"
+    },
+    {
+      "from": "色相/饱和度/明度.Color",
+      "to": "自发光(发射).Color"
+    },
+    {
+      "from": "自发光(发射).Emission",
+      "to": "混合着色器.Shader"
+    },
+    {
+      "from": "混合着色器.Shader",
+      "to": "混合着色器.001.Shader"
+    },
+    {
+      "from": "混合着色器.001.Shader",
+      "to": "材质输出.001.Surface"
+    },
+    {
+      "from": "光程.Is Shadow Ray",
+      "to": "混合着色器.001.Factor"
+    },
+    {
+      "from": "透明 BSDF.001.BSDF",
+      "to": "混合着色器.001.Shader"
+    }
+  ]
+}

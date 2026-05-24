@@ -1,0 +1,36 @@
+# 系统文件
+Thumbs.db
+.DS_Store
+ehthumbs.db
+desktop.ini
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 运行时生成
+*.log
+llm_config.json
+
+# MMD 模型目录（过大，不纳入版本控制）
+assets/mmd_model/
+
+# 贴图（模型目录下的贴图已被排除，此规则兜底）
+*.tga
+*.bmp
+*.jpg
+*.jpeg
+
+# 其他大型二进制
+*.blend
+*.fbx
+*.obj
+*.mtl
+*.gltf
+*.glb
+*.pmx
+*.pmd
+*.vmd
+*.vpd
+*.x

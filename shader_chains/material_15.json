@@ -1,0 +1,256 @@
+{
+  "material": "材質15",
+  "nodes": [
+    {
+      "name": "材质输出",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        400.0,
+        1500.0
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "mmd_base_tex",
+      "type": "TEX_IMAGE",
+      "location": [
+        -840.0,
+        1280.0
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0011.png"
+    },
+    {
+      "name": "图像纹理",
+      "type": "TEX_IMAGE",
+      "location": [
+        -623.8367309570312,
+        903.0052490234375
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0011_Gloss.png"
+    },
+    {
+      "name": "图像纹理.002",
+      "type": "TEX_IMAGE",
+      "location": [
+        -150.81103515625,
+        665.57373046875
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0011_Normal.png"
+    },
+    {
+      "name": "法线贴图",
+      "type": "NORMAL_MAP",
+      "location": [
+        -50.001304626464844,
+        985.1659545898438
+      ],
+      "Strength": 1.0,
+      "Color": [
+        0.5,
+        0.5,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "反转",
+      "type": "INVERT",
+      "location": [
+        -81.15798950195312,
+        1272.5740966796875
+      ],
+      "Factor": 1.0,
+      "Color": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "name": "图像纹理.001",
+      "type": "TEX_IMAGE",
+      "location": [
+        -1004.4317626953125,
+        899.1607055664062
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0011_Metalness.png"
+    },
+    {
+      "name": "原理化BSDF",
+      "type": "BSDF_PRINCIPLED",
+      "location": [
+        112.70128631591797,
+        1506.065673828125
+      ],
+      "Base Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ],
+      "Metallic": 0.0,
+      "Roughness": 0.5,
+      "IOR": 1.4500000476837158,
+      "Alpha": 1.0,
+      "Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Weight": 0.0,
+      "Diffuse Roughness": 0.0,
+      "Subsurface Weight": 0.0,
+      "Subsurface Radius": [
+        1.0,
+        0.2,
+        0.1
+      ],
+      "Subsurface Scale": 0.05000000074505806,
+      "Subsurface IOR": 1.399999976158142,
+      "Subsurface Anisotropy": 0.0,
+      "Specular IOR Level": 0.0,
+      "Specular Tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Anisotropic": 0.0,
+      "Anisotropic Rotation": 0.0,
+      "Tangent": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Transmission Weight": 0.0,
+      "Coat Weight": 0.0,
+      "Coat Roughness": 0.029999999329447746,
+      "Coat IOR": 1.5,
+      "Coat Tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Coat Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Sheen Weight": 0.0,
+      "Sheen Roughness": 0.5,
+      "Sheen Tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Emission Color": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "Emission Strength": 1.0,
+      "Thin Film Thickness": 0.0,
+      "Thin Film IOR": 1.3300000429153442
+    },
+    {
+      "name": "Gamma",
+      "type": "GAMMA",
+      "location": [
+        -478.3668212890625,
+        1361.9775390625
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Gamma": 1.100000023841858
+    },
+    {
+      "name": "Hue/Saturation/Value",
+      "type": "HUE_SAT",
+      "location": [
+        -282.3703308105469,
+        1418.22607421875
+      ],
+      "Hue": 0.5,
+      "Saturation": 1.0,
+      "Value": 1.0,
+      "Factor": 1.0,
+      "Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "反转.Color",
+      "to": "原理化BSDF.Roughness"
+    },
+    {
+      "from": "法线贴图.Normal",
+      "to": "原理化BSDF.Normal"
+    },
+    {
+      "from": "原理化BSDF.BSDF",
+      "to": "材质输出.Surface"
+    },
+    {
+      "from": "Hue/Saturation/Value.Color",
+      "to": "原理化BSDF.Base Color"
+    },
+    {
+      "from": "图像纹理.Color",
+      "to": "反转.Color"
+    },
+    {
+      "from": "图像纹理.001.Color",
+      "to": "原理化BSDF.Metallic"
+    },
+    {
+      "from": "图像纹理.002.Color",
+      "to": "法线贴图.Color"
+    },
+    {
+      "from": "mmd_base_tex.Color",
+      "to": "Gamma.Color"
+    },
+    {
+      "from": "Gamma.Color",
+      "to": "Hue/Saturation/Value.Color"
+    }
+  ]
+}

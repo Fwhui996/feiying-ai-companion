@@ -1,0 +1,217 @@
+{
+  "material": "材質22",
+  "nodes": [
+    {
+      "name": "mmd_base_tex",
+      "type": "TEX_IMAGE",
+      "location": [
+        -918.8169555664062,
+        1358.87890625
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0018.png"
+    },
+    {
+      "name": "法线贴图",
+      "type": "NORMAL_MAP",
+      "location": [
+        -50.001304626464844,
+        985.1659545898438
+      ],
+      "Strength": 1.0,
+      "Color": [
+        0.5,
+        0.5,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "图像纹理",
+      "type": "TEX_IMAGE",
+      "location": [
+        -463.92266845703125,
+        999.7080078125
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0018_Normal.png"
+    },
+    {
+      "name": "材质输出",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        594.7194213867188,
+        1512.7701416015625
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "原理化BSDF",
+      "type": "BSDF_PRINCIPLED",
+      "location": [
+        112.70128631591797,
+        1506.065673828125
+      ],
+      "Base Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ],
+      "Metallic": 0.0,
+      "Roughness": 1.0,
+      "IOR": 1.4500000476837158,
+      "Alpha": 1.0,
+      "Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Weight": 0.0,
+      "Diffuse Roughness": 0.0,
+      "Subsurface Weight": 0.0,
+      "Subsurface Radius": [
+        1.0,
+        0.2,
+        0.1
+      ],
+      "Subsurface Scale": 0.05000000074505806,
+      "Subsurface IOR": 1.399999976158142,
+      "Subsurface Anisotropy": 0.0,
+      "Specular IOR Level": 0.10000000149011612,
+      "Specular Tint": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ],
+      "Anisotropic": 0.0,
+      "Anisotropic Rotation": 0.0,
+      "Tangent": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Transmission Weight": 0.0,
+      "Coat Weight": 0.0,
+      "Coat Roughness": 0.029999999329447746,
+      "Coat IOR": 1.5,
+      "Coat Tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Coat Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Sheen Weight": 0.0,
+      "Sheen Roughness": 0.5,
+      "Sheen Tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Emission Color": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "Emission Strength": 0.40000003576278687,
+      "Thin Film Thickness": 0.0,
+      "Thin Film IOR": 1.3300000429153442
+    },
+    {
+      "name": "色相/饱和度/明度",
+      "type": "HUE_SAT",
+      "location": [
+        -282.3958435058594,
+        1454.5914306640625
+      ],
+      "Hue": 0.5,
+      "Saturation": 1.2999999523162842,
+      "Value": 2.0,
+      "Factor": 1.0,
+      "Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ]
+    },
+    {
+      "name": "混合",
+      "type": "MIX",
+      "location": [
+        -57.29871368408203,
+        1386.065673828125
+      ],
+      "Factor": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "A": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "B": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "法线贴图.Normal",
+      "to": "原理化BSDF.Normal"
+    },
+    {
+      "from": "mmd_base_tex.Alpha",
+      "to": "原理化BSDF.Alpha"
+    },
+    {
+      "from": "原理化BSDF.BSDF",
+      "to": "材质输出.Surface"
+    },
+    {
+      "from": "图像纹理.Color",
+      "to": "法线贴图.Color"
+    },
+    {
+      "from": "mmd_base_tex.Color",
+      "to": "色相/饱和度/明度.Color"
+    },
+    {
+      "from": "色相/饱和度/明度.Color",
+      "to": "原理化BSDF.Base Color"
+    },
+    {
+      "from": "色相/饱和度/明度.Color",
+      "to": "混合.B"
+    },
+    {
+      "from": "混合.Result",
+      "to": "原理化BSDF.Specular Tint"
+    }
+  ]
+}

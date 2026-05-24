@@ -1,0 +1,134 @@
+{
+  "material": "材質3",
+  "nodes": [
+    {
+      "name": "材质输出",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        400.0,
+        1500.0
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "透明 BSDF",
+      "type": "BSDF_TRANSPARENT",
+      "location": [
+        -344.2380065917969,
+        1181.4814453125
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Weight": 0.0
+    },
+    {
+      "name": "混合着色器",
+      "type": "MIX_SHADER",
+      "location": [
+        140.8472900390625,
+        1397.175048828125
+      ],
+      "Factor": 0.5
+    },
+    {
+      "name": "漫射 BSDF",
+      "type": "BSDF_DIFFUSE",
+      "location": [
+        -657.13037109375,
+        1516.3704833984375
+      ],
+      "Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ],
+      "Roughness": 0.0,
+      "Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Weight": 0.0
+    },
+    {
+      "name": "mmd_base_tex",
+      "type": "TEX_IMAGE",
+      "location": [
+        -840.0,
+        1280.0
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0020_2.png"
+    },
+    {
+      "name": "Shader --> RGB",
+      "type": "SHADERTORGB",
+      "location": [
+        -454.13665771484375,
+        1520.1324462890625
+      ]
+    },
+    {
+      "name": "色相/饱和度/明度",
+      "type": "HUE_SAT",
+      "location": [
+        -248.43099975585938,
+        1540.3114013671875
+      ],
+      "Hue": 0.5,
+      "Saturation": 1.2999999523162842,
+      "Value": 3.0,
+      "Factor": 1.0,
+      "Color": [
+        0.217534,
+        0.8,
+        0.234143,
+        1.0
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "透明 BSDF.BSDF",
+      "to": "混合着色器.Shader"
+    },
+    {
+      "from": "漫射 BSDF.BSDF",
+      "to": "Shader --> RGB.Shader"
+    },
+    {
+      "from": "mmd_base_tex.Color",
+      "to": "漫射 BSDF.Color"
+    },
+    {
+      "from": "mmd_base_tex.Alpha",
+      "to": "混合着色器.Factor"
+    },
+    {
+      "from": "混合着色器.Shader",
+      "to": "材质输出.Surface"
+    },
+    {
+      "from": "色相/饱和度/明度.Color",
+      "to": "混合着色器.Shader"
+    },
+    {
+      "from": "Shader --> RGB.Color",
+      "to": "色相/饱和度/明度.Color"
+    }
+  ]
+}

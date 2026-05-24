@@ -1,0 +1,263 @@
+{
+  "material": "材質6",
+  "nodes": [
+    {
+      "name": "材质输出",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        1143.8016357421875,
+        1950.7425537109375
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "Mix Shader",
+      "type": "MIX_SHADER",
+      "location": [
+        924.0,
+        1970.4447021484375
+      ],
+      "Factor": 0.800000011920929
+    },
+    {
+      "name": "Transparent BSDF",
+      "type": "BSDF_TRANSPARENT",
+      "location": [
+        808.7291259765625,
+        1554.1820068359375
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Weight": 0.0
+    },
+    {
+      "name": "Mix",
+      "type": "MIX",
+      "location": [
+        40.331146240234375,
+        2181.138427734375
+      ],
+      "Factor": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "A": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "B": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "Emission",
+      "type": "EMISSION",
+      "location": [
+        509.8938293457031,
+        2164.614990234375
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Strength": 3.3999998569488525,
+      "Weight": 0.0
+    },
+    {
+      "name": "Math",
+      "type": "MATH",
+      "location": [
+        375.7488098144531,
+        1947.375244140625
+      ],
+      "Value": 0.5
+    },
+    {
+      "name": "Invert Color",
+      "type": "INVERT",
+      "location": [
+        518.5970458984375,
+        1644.6751708984375
+      ],
+      "Factor": 1.024999976158142,
+      "Color": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "name": "图像纹理.001",
+      "type": "TEX_IMAGE",
+      "location": [
+        -548.5835571289062,
+        1770.70166015625
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0033.png"
+    },
+    {
+      "name": "RGB to BW",
+      "type": "RGBTOBW",
+      "location": [
+        -245.40277099609375,
+        1709.60986328125
+      ],
+      "Color": [
+        0.5,
+        0.5,
+        0.5,
+        1.0
+      ]
+    },
+    {
+      "name": "Color Ramp",
+      "type": "VALTORGB",
+      "location": [
+        61.53351974487305,
+        1891.8426513671875
+      ],
+      "Factor": 0.5
+    },
+    {
+      "name": "值",
+      "type": "VALUE",
+      "location": [
+        1143.8016357421875,
+        1790.7425537109375
+      ]
+    },
+    {
+      "name": "材质输出.001",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        0.0,
+        0.0
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "混合着色器",
+      "type": "MIX_SHADER",
+      "location": [
+        0.0,
+        0.0
+      ],
+      "Factor": 0.5
+    },
+    {
+      "name": "光程",
+      "type": "LIGHT_PATH",
+      "location": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "透明 BSDF",
+      "type": "BSDF_TRANSPARENT",
+      "location": [
+        0.0,
+        0.0
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Weight": 0.0
+    }
+  ],
+  "links": [
+    {
+      "from": "Mix Shader.Shader",
+      "to": "材质输出.Surface"
+    },
+    {
+      "from": "Transparent BSDF.BSDF",
+      "to": "Mix Shader.Shader"
+    },
+    {
+      "from": "图像纹理.001.Color",
+      "to": "RGB to BW.Color"
+    },
+    {
+      "from": "Invert Color.Color",
+      "to": "Mix Shader.Factor"
+    },
+    {
+      "from": "RGB to BW.Val",
+      "to": "Invert Color.Color"
+    },
+    {
+      "from": "RGB to BW.Val",
+      "to": "Mix.Factor"
+    },
+    {
+      "from": "Emission.Emission",
+      "to": "Mix Shader.Shader"
+    },
+    {
+      "from": "Mix.Result",
+      "to": "Emission.Color"
+    },
+    {
+      "from": "Math.Value",
+      "to": "Emission.Strength"
+    },
+    {
+      "from": "Color Ramp.Color",
+      "to": "Math.Value"
+    },
+    {
+      "from": "RGB to BW.Val",
+      "to": "Color Ramp.Factor"
+    },
+    {
+      "from": "值.Value",
+      "to": "材质输出.Thickness"
+    },
+    {
+      "from": "Mix Shader.Shader",
+      "to": "混合着色器.Shader"
+    },
+    {
+      "from": "混合着色器.Shader",
+      "to": "材质输出.001.Surface"
+    },
+    {
+      "from": "光程.Is Shadow Ray",
+      "to": "混合着色器.Factor"
+    },
+    {
+      "from": "透明 BSDF.BSDF",
+      "to": "混合着色器.Shader"
+    }
+  ]
+}

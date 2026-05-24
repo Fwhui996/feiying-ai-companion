@@ -1,0 +1,71 @@
+{
+  "material": "材質30",
+  "nodes": [
+    {
+      "name": "材质输出",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        400.0,
+        1500.0
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "mmd_base_tex",
+      "type": "TEX_IMAGE",
+      "location": [
+        -840.0,
+        1280.0
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0028_2.png"
+    },
+    {
+      "name": "光泽 BSDF",
+      "type": "BSDF_GLOSSY",
+      "location": [
+        -320.5374450683594,
+        1292.189453125
+      ],
+      "Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ],
+      "Roughness": 0.33076924085617065,
+      "Anisotropy": 0.0,
+      "Rotation": 0.0,
+      "Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Tangent": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Weight": 0.0
+    }
+  ],
+  "links": [
+    {
+      "from": "mmd_base_tex.Color",
+      "to": "光泽 BSDF.Color"
+    },
+    {
+      "from": "光泽 BSDF.BSDF",
+      "to": "材质输出.Surface"
+    }
+  ]
+}

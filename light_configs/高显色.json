@@ -1,0 +1,56 @@
+{
+  "lights": {
+    "key": {
+      "enabled": true,
+      "color": "#ffd8b0",
+      "intensity": 1.0,
+      "x": 15,
+      "y": 25,
+      "z": 20
+    },
+    "fill": {
+      "enabled": true,
+      "color": "#8899cc",
+      "intensity": 0.15,
+      "x": -10,
+      "y": 8,
+      "z": 5
+    },
+    "rim": {
+      "enabled": true,
+      "color": "#ffffff",
+      "intensity": 0.2,
+      "x": 0,
+      "y": 20,
+      "z": -15
+    },
+    "ambient": {
+      "color": "#3a4466",
+      "intensity": 0.05
+    },
+    "exposure": 1.0,
+    "colorTemp": 55
+  },
+  "pointLights": [],
+  "rimSpec": {
+    "rimColor": "#ffffff",
+    "rimPower": 4.5,
+    "rimIntensity": 0.3,
+    "specColor": "#ffffff",
+    "specIntensity": 0.1,
+    "specShininess": 32,
+    "unlit": false
+  },
+  "materials": {
+    "5": {
+      "roughness": 0.01,
+      "metalness": 0.05,
+      "opacity": 0.55,
+      "emissive": "#ffffff",
+      "emissiveIntensity": 0,
+      "transparent": true,
+      "depthWrite": false,
+      "envMapIntensity": 0
+    }
+  }
+}

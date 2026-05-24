@@ -1,0 +1,106 @@
+{
+  "lights": {
+    "key": {
+      "enabled": true,
+      "color": "#fff0e0",
+      "intensity": 1,
+      "x": 15,
+      "y": 25,
+      "z": 20
+    },
+    "fill": {
+      "enabled": true,
+      "color": "#b0c8ff",
+      "intensity": 0.35,
+      "x": -10,
+      "y": 8,
+      "z": 5
+    },
+    "rim": {
+      "enabled": true,
+      "color": "#ffffff",
+      "intensity": 0.4,
+      "x": 0,
+      "y": 20,
+      "z": -15
+    },
+    "ambient": {
+      "color": "#3a4466",
+      "intensity": 0.22
+    },
+    "exposure": 0.9,
+    "colorTemp": 55
+  },
+  "pointLights": [
+    {
+      "color": "#fff8e6",
+      "intensity": 10,
+      "distance": 200,
+      "decay": 2,
+      "x": 0,
+      "y": 74.37651681900024,
+      "z": -1.52587890625e-05
+    }
+  ],
+  "rimSpec": {
+    "rimColor": "#ffffff",
+    "rimPower": 4.5,
+    "rimIntensity": 0.3,
+    "specColor": "#ffffff",
+    "specIntensity": 0.1,
+    "specShininess": 32,
+    "unlit": false
+  },
+  "materials": {
+    "5": {
+      "roughness": 0.15,
+      "metalness": 0.05,
+      "opacity": 0.6,
+      "emissive": "#000000",
+      "emissiveIntensity": 0,
+      "transparent": true,
+      "depthWrite": true,
+      "envMapIntensity": 1
+    },
+    "11": {
+      "roughness": 0.05,
+      "metalness": 0.1,
+      "opacity": 1,
+      "emissive": "#000000",
+      "emissiveIntensity": 0,
+      "transparent": false,
+      "depthWrite": true,
+      "envMapIntensity": 0.3
+    },
+    "19": {
+      "roughness": 0.1,
+      "metalness": 0.2,
+      "opacity": 0.35,
+      "emissive": "#000000",
+      "emissiveIntensity": 0,
+      "transparent": true,
+      "depthWrite": false,
+      "envMapIntensity": 1
+    },
+    "21": {
+      "roughness": 0.78,
+      "metalness": 0.02,
+      "opacity": 1,
+      "emissive": "#000000",
+      "emissiveIntensity": 0,
+      "transparent": false,
+      "depthWrite": true,
+      "envMapIntensity": 1
+    },
+    "26": {
+      "roughness": 0.1,
+      "metalness": 0.2,
+      "opacity": 0.35,
+      "emissive": "#000000",
+      "emissiveIntensity": 0,
+      "transparent": true,
+      "depthWrite": false,
+      "envMapIntensity": 1
+    }
+  }
+}

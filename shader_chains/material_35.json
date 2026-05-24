@@ -1,0 +1,94 @@
+{
+  "material": "材質35",
+  "nodes": [
+    {
+      "name": "材质输出",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        779.8016357421875,
+        1500.0
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "颜色渐变",
+      "type": "VALTORGB",
+      "location": [
+        -229.52984619140625,
+        1528.362060546875
+      ],
+      "Factor": 0.5
+    },
+    {
+      "name": "透明 BSDF",
+      "type": "BSDF_TRANSPARENT",
+      "location": [
+        120.01973724365234,
+        1554.27783203125
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Weight": 0.0
+    },
+    {
+      "name": "玻璃 BSDF",
+      "type": "BSDF_GLASS",
+      "location": [
+        58.14118576049805,
+        1266.9862060546875
+      ],
+      "Color": [
+        0.705356,
+        0.792612,
+        1.0,
+        1.0
+      ],
+      "Roughness": 0.6499999761581421,
+      "IOR": 1.649999976158142,
+      "Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Weight": 0.0,
+      "Thin Film Thickness": 0.0,
+      "Thin Film IOR": 1.3300000429153442
+    },
+    {
+      "name": "混合着色器",
+      "type": "MIX_SHADER",
+      "location": [
+        559.8016357421875,
+        1446.3173828125
+      ],
+      "Factor": 0.15000000596046448
+    }
+  ],
+  "links": [
+    {
+      "from": "颜色渐变.Color",
+      "to": "透明 BSDF.Color"
+    },
+    {
+      "from": "混合着色器.Shader",
+      "to": "材质输出.Surface"
+    },
+    {
+      "from": "透明 BSDF.BSDF",
+      "to": "混合着色器.Shader"
+    },
+    {
+      "from": "玻璃 BSDF.BSDF",
+      "to": "混合着色器.Shader"
+    }
+  ]
+}

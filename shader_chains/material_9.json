@@ -1,0 +1,81 @@
+{
+  "material": "材質9",
+  "nodes": [
+    {
+      "name": "材质输出",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        400.0,
+        1500.0
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "mmd_base_tex",
+      "type": "TEX_IMAGE",
+      "location": [
+        -840.0,
+        1280.0
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0004.png"
+    },
+    {
+      "name": "Emission Viewer",
+      "type": "EMISSION",
+      "location": [
+        400.0,
+        1540.0
+      ],
+      "Color": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Strength": 1.0,
+      "Weight": 0.0
+    },
+    {
+      "name": "色相/饱和度/明度",
+      "type": "HUE_SAT",
+      "location": [
+        22.90912628173828,
+        1490.7945556640625
+      ],
+      "Hue": 0.5,
+      "Saturation": 2.0,
+      "Value": 2.0,
+      "Factor": 1.0,
+      "Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "Emission Viewer.Emission",
+      "to": "材质输出.Surface"
+    },
+    {
+      "from": "mmd_base_tex.Color",
+      "to": "色相/饱和度/明度.Color"
+    },
+    {
+      "from": "色相/饱和度/明度.Color",
+      "to": "Emission Viewer.Color"
+    }
+  ]
+}

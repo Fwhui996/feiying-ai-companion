@@ -1,0 +1,277 @@
+{
+  "material": "材質12",
+  "nodes": [
+    {
+      "name": "mmd_base_tex",
+      "type": "TEX_IMAGE",
+      "location": [
+        -813.6395263671875,
+        1422.1651611328125
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0008.png"
+    },
+    {
+      "name": "原理化BSDF",
+      "type": "BSDF_PRINCIPLED",
+      "location": [
+        16.787208557128906,
+        1479.5906982421875
+      ],
+      "Base Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ],
+      "Metallic": 0.10000000149011612,
+      "Roughness": 0.004999999888241291,
+      "IOR": 1.5499999523162842,
+      "Alpha": 1.0,
+      "Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Weight": 0.0,
+      "Diffuse Roughness": 0.0,
+      "Subsurface Weight": 0.0,
+      "Subsurface Radius": [
+        1.0,
+        0.2,
+        0.1
+      ],
+      "Subsurface Scale": 0.05000000074505806,
+      "Subsurface IOR": 1.399999976158142,
+      "Subsurface Anisotropy": 0.0,
+      "Specular IOR Level": 0.10000000149011612,
+      "Specular Tint": [
+        0.82,
+        0.82,
+        0.82,
+        1.0
+      ],
+      "Anisotropic": 0.0,
+      "Anisotropic Rotation": 0.0,
+      "Tangent": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Transmission Weight": 0.0,
+      "Coat Weight": 0.08250000327825546,
+      "Coat Roughness": 0.029999999329447746,
+      "Coat IOR": 1.5,
+      "Coat Tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Coat Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Sheen Weight": 0.1600000113248825,
+      "Sheen Roughness": 0.5,
+      "Sheen Tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Emission Color": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "Emission Strength": 1.0,
+      "Thin Film Thickness": 0.0,
+      "Thin Film IOR": 1.3300000429153442
+    },
+    {
+      "name": "材质输出",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        923.90966796875,
+        1539.02294921875
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "Add Shader",
+      "type": "ADD_SHADER",
+      "location": [
+        642.9362182617188,
+        1499.7420654296875
+      ]
+    },
+    {
+      "name": "Glossy BSDF",
+      "type": "BSDF_GLOSSY",
+      "location": [
+        413.6097717285156,
+        1188.5897216796875
+      ],
+      "Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ],
+      "Roughness": 0.20000000298023224,
+      "Anisotropy": 0.0,
+      "Rotation": 0.0,
+      "Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Tangent": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Weight": 0.0
+    },
+    {
+      "name": "Hue Saturation Value",
+      "type": "HUE_SAT",
+      "location": [
+        252.3884735107422,
+        1068.7308349609375
+      ],
+      "Hue": 0.5,
+      "Saturation": 1.0,
+      "Value": 2.0,
+      "Factor": 1.0,
+      "Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ]
+    },
+    {
+      "name": "Hue Saturation Value.001",
+      "type": "HUE_SAT",
+      "location": [
+        -231.0007781982422,
+        1465.2728271484375
+      ],
+      "Hue": 0.5,
+      "Saturation": 1.0,
+      "Value": 1.5,
+      "Factor": 1.0,
+      "Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ]
+    },
+    {
+      "name": "混合",
+      "type": "MIX",
+      "location": [
+        -253.21279907226562,
+        1359.5906982421875
+      ],
+      "Factor": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "A": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "B": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "混合.001",
+      "type": "MIX",
+      "location": [
+        -153.21279907226562,
+        1359.5906982421875
+      ],
+      "Factor": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "A": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "B": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "mmd_base_tex.Alpha",
+      "to": "原理化BSDF.Alpha"
+    },
+    {
+      "from": "Hue Saturation Value.001.Color",
+      "to": "原理化BSDF.Base Color"
+    },
+    {
+      "from": "Hue Saturation Value.Color",
+      "to": "Glossy BSDF.Color"
+    },
+    {
+      "from": "Add Shader.Shader",
+      "to": "材质输出.Surface"
+    },
+    {
+      "from": "原理化BSDF.BSDF",
+      "to": "Add Shader.Shader"
+    },
+    {
+      "from": "Glossy BSDF.BSDF",
+      "to": "Add Shader.Shader"
+    },
+    {
+      "from": "mmd_base_tex.Color",
+      "to": "Hue Saturation Value.Color"
+    },
+    {
+      "from": "mmd_base_tex.Color",
+      "to": "Hue Saturation Value.001.Color"
+    },
+    {
+      "from": "Hue Saturation Value.001.Color",
+      "to": "混合.A"
+    },
+    {
+      "from": "混合.Result",
+      "to": "混合.001.B"
+    },
+    {
+      "from": "混合.001.Result",
+      "to": "原理化BSDF.Specular Tint"
+    }
+  ]
+}

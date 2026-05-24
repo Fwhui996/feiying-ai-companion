@@ -1,0 +1,325 @@
+{
+  "material": "材質7",
+  "nodes": [
+    {
+      "name": "反转",
+      "type": "INVERT",
+      "location": [
+        -81.15798950195312,
+        1272.5740966796875
+      ],
+      "Factor": 1.0,
+      "Color": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "name": "图像纹理",
+      "type": "TEX_IMAGE",
+      "location": [
+        -657.164794921875,
+        871.9271240234375
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0001_Normal.png"
+    },
+    {
+      "name": "图像纹理.001",
+      "type": "TEX_IMAGE",
+      "location": [
+        -1345.487060546875,
+        1006.8497314453125
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0001_Gloss.png"
+    },
+    {
+      "name": "法线贴图",
+      "type": "NORMAL_MAP",
+      "location": [
+        -155.66534423828125,
+        907.8892822265625
+      ],
+      "Strength": 1.0,
+      "Color": [
+        0.5,
+        0.5,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "颜色渐变",
+      "type": "VALTORGB",
+      "location": [
+        -235.99024963378906,
+        1742.9578857421875
+      ],
+      "Factor": 0.5
+    },
+    {
+      "name": "图像纹理.002",
+      "type": "TEX_IMAGE",
+      "location": [
+        -1156.3033447265625,
+        1313.1439208984375
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0001_Metalness.png"
+    },
+    {
+      "name": "mmd_base_tex",
+      "type": "TEX_IMAGE",
+      "location": [
+        -1050.8934326171875,
+        1707.597412109375
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0001.png"
+    },
+    {
+      "name": "Image Texture",
+      "type": "TEX_IMAGE",
+      "location": [
+        -17.2862548828125,
+        699.0076293945312
+      ],
+      "Vector": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "image": "Tex_0001_A.png"
+    },
+    {
+      "name": "材质输出",
+      "type": "OUTPUT_MATERIAL",
+      "location": [
+        891.7343139648438,
+        1457.5018310546875
+      ],
+      "Displacement": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Thickness": 0.0
+    },
+    {
+      "name": "Math",
+      "type": "MATH",
+      "location": [
+        303.0,
+        736.66650390625
+      ],
+      "Value": 0.5
+    },
+    {
+      "name": "原理化BSDF",
+      "type": "BSDF_PRINCIPLED",
+      "location": [
+        522.7086181640625,
+        1451.9886474609375
+      ],
+      "Base Color": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ],
+      "Metallic": 0.0,
+      "Roughness": 0.5,
+      "IOR": 1.4500000476837158,
+      "Alpha": 1.0,
+      "Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Weight": 0.0,
+      "Diffuse Roughness": 0.0,
+      "Subsurface Weight": 0.0,
+      "Subsurface Radius": [
+        1.0,
+        0.2,
+        0.1
+      ],
+      "Subsurface Scale": 0.05000000074505806,
+      "Subsurface IOR": 1.399999976158142,
+      "Subsurface Anisotropy": 0.0,
+      "Specular IOR Level": 0.10000000149011612,
+      "Specular Tint": [
+        0.8,
+        0.8,
+        0.8,
+        1.0
+      ],
+      "Anisotropic": 0.0,
+      "Anisotropic Rotation": 0.0,
+      "Tangent": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Transmission Weight": 0.0,
+      "Coat Weight": 0.0,
+      "Coat Roughness": 0.029999999329447746,
+      "Coat IOR": 1.5,
+      "Coat Tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Coat Normal": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "Sheen Weight": 0.0,
+      "Sheen Roughness": 0.5,
+      "Sheen Tint": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "Emission Color": [
+        0.991102,
+        0.76393,
+        0.195413,
+        1.0
+      ],
+      "Emission Strength": 1.0,
+      "Thin Film Thickness": 0.0,
+      "Thin Film IOR": 1.3300000429153442
+    },
+    {
+      "name": "混合",
+      "type": "MIX",
+      "location": [
+        252.7086181640625,
+        1331.9886474609375
+      ],
+      "Factor": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "A": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "B": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "name": "混合.001",
+      "type": "MIX",
+      "location": [
+        352.7086181640625,
+        1331.9886474609375
+      ],
+      "Factor": [
+        0.5,
+        0.5,
+        0.5
+      ],
+      "A": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "B": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "links": [
+    {
+      "from": "反转.Color",
+      "to": "原理化BSDF.Roughness"
+    },
+    {
+      "from": "法线贴图.Normal",
+      "to": "原理化BSDF.Normal"
+    },
+    {
+      "from": "颜色渐变.Color",
+      "to": "原理化BSDF.Metallic"
+    },
+    {
+      "from": "mmd_base_tex.Alpha",
+      "to": "原理化BSDF.Alpha"
+    },
+    {
+      "from": "mmd_base_tex.Color",
+      "to": "原理化BSDF.Base Color"
+    },
+    {
+      "from": "图像纹理.Color",
+      "to": "法线贴图.Color"
+    },
+    {
+      "from": "图像纹理.001.Color",
+      "to": "反转.Color"
+    },
+    {
+      "from": "图像纹理.002.Color",
+      "to": "颜色渐变.Factor"
+    },
+    {
+      "from": "Math.Value",
+      "to": "原理化BSDF.Emission Strength"
+    },
+    {
+      "from": "原理化BSDF.BSDF",
+      "to": "材质输出.Surface"
+    },
+    {
+      "from": "Image Texture.Color",
+      "to": "Math.Value"
+    },
+    {
+      "from": "mmd_base_tex.Color",
+      "to": "混合.A"
+    },
+    {
+      "from": "颜色渐变.Color",
+      "to": "混合.Factor"
+    },
+    {
+      "from": "混合.Result",
+      "to": "混合.001.B"
+    },
+    {
+      "from": "混合.001.Result",
+      "to": "原理化BSDF.Specular Tint"
+    }
+  ]
+}
